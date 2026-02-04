@@ -6,6 +6,7 @@ langchain-chroma==0.2.2
 chromadb==0.6.3
 openai==1.59.5
 requests==2.32.3
+cloudscraper==1.2.71
 beautifulsoup4==4.12.3
 python-dotenv==1.0.1
 pydantic==2.10.4
