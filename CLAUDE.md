@@ -6,7 +6,7 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 ## Current Project State
 | Aspect | Status |
 |--------|--------|
-| Scraper Vikidia | OK (maths/anglais/espagnol termines, francais/histoire-geo/svt/physique-chimie/technologie en cours) |
+| Scraper Vikidia | TERMINE - 8 matieres scrapees (24 321 articles, 43 857 chunks) |
 | Scraper Wikiversite | Pas encore implemente |
 | Scraper Eduscol | Pas encore implemente |
 | Backend FastAPI | Pas encore implemente (structure prete) |
@@ -15,10 +15,9 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 | Tests | Aucun |
 
 ## Next Immediate Action
-1. Attendre la fin des scrapers en cours (francais, histoire-geo, svt, physique-chimie, technologie)
-2. Verifier les donnees scrapees dans `data/raw/vikidia/` et `data/processed/`
-3. Implementer le script d'ingestion ChromaDB (embeddings OpenAI -> ChromaDB)
-4. Implementer le backend FastAPI + chaine RAG LangChain
+1. Verifier les donnees scrapees dans `data/raw/vikidia/` et `data/processed/`
+2. Implementer le script d'ingestion ChromaDB (embeddings OpenAI -> ChromaDB)
+3. Implementer le backend FastAPI + chaine RAG LangChain
 
 ## Stack technique
 - **Backend** : Python 3.11+ / FastAPI / LangChain
@@ -54,16 +53,17 @@ RAG/
 - **Eduscol** : programmes officiels Education Nationale (scraping HTTP) - A FAIRE
 
 ## Matieres
-| Matiere | Source Vikidia | Articles scrapes |
-|---------|---------------|-----------------|
-| Mathematiques | Categories:Mathematiques | 543 (967 chunks) |
-| Francais | Categories:Francais,Grammaire,Litterature | En cours (~1600+) |
-| Histoire-Geo | Categories:Histoire,Geographie | En cours (~1300+) |
-| SVT | Categories:Biologie,Geologie | En cours |
-| Physique-Chimie | Categories:Physique,Chimie | En cours |
-| Technologie | Categories:Technologie | En cours |
-| Anglais | Categories:Anglais | 6 (peu de contenu sur Vikidia) |
-| Espagnol | Categories:Espagnol | 3 (peu de contenu sur Vikidia) |
+| Matiere | Source Vikidia | Articles | Chunks |
+|---------|---------------|----------|--------|
+| Histoire-Geo | Categories:Histoire,Geographie | 13 112 | 25 474 |
+| SVT | Categories:Biologie,Geologie | 5 454 | 8 481 |
+| Francais | Categories:Francais,Grammaire,Litterature | 3 040 | 4 835 |
+| Physique-Chimie | Categories:Physique,Chimie | 1 439 | 2 751 |
+| Technologie | Categories:Technologie | 724 | 1 349 |
+| Mathematiques | Categories:Mathematiques | 543 | 967 |
+| Anglais | Categories:Anglais | 6 | - |
+| Espagnol | Categories:Espagnol | 3 | - |
+| **TOTAL** | | **24 321** | **43 857** |
 
 ## Niveaux
 - 6eme (cycle 3)

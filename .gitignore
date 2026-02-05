@@ -10,9 +10,7 @@ build/
 venv/
 .venv/
 
-# Data
-data/raw/
-data/processed/
+# Data (tracked for reproducibility)
 
 # ChromaDB
 chromadb/
