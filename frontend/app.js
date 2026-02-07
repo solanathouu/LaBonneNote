@@ -6,7 +6,7 @@ const API_URL = 'http://localhost:8000';
 
 // État global de l'application
 const state = {
-    view: 'chat',  // 'chat' | 'library' | 'lesson' | 'favorites'
+    view: 'chat',  // 'chat' | 'library' | 'lesson' | 'favorites' | 'mes-cours'
     selectedMatiere: null,
     selectedLesson: null,
     chatHistory: [],
@@ -22,7 +22,9 @@ const state = {
     // Favoris (stockés dans localStorage)
     favorites: [],
     // Animation uniquement au chargement initial
-    isInitialLibraryLoad: true
+    isInitialLibraryLoad: true,
+    // Source pour les recherches (vikidia, mes_cours, tous)
+    selectedSource: 'vikidia'
 };
 
 // ===== FAVORIS =====
@@ -130,6 +132,9 @@ function renderView() {
         case 'favorites':
             renderFavoritesView(mainContainer);
             break;
+        case 'mes-cours':
+            renderMesCoursView(mainContainer);
+            break;
         case 'lesson':
             renderLessonView(mainContainer);
             break;
@@ -186,6 +191,14 @@ function renderChatView(mainContainer, inputFooter) {
                     🤖 Détecté : ${state.detectedNiveau || ''} ${state.detectedMatiere ? '• ' + formatMatiere(state.detectedMatiere) : ''}
                 </div>
             ` : ''}
+            <div class="source-selector">
+                <label for="source-select">📚 Chercher dans :</label>
+                <select id="source-select" class="source-select">
+                    <option value="vikidia">Cours généraux</option>
+                    <option value="mes_cours">Mes Cours (PDFs personnels)</option>
+                    <option value="tous">Les deux</option>
+                </select>
+            </div>
             <div class="input-indicator" id="input-indicator">
                 <span class="indicator-dot"></span>
                 <span id="indicator-text">Prêt à répondre</span>
@@ -255,11 +268,16 @@ async function handleSendMessage() {
     scrollToBottom();
 
     try {
+        // Get selected source
+        const sourceSelect = document.getElementById('source-select');
+        const source = sourceSelect ? sourceSelect.value : 'vikidia';
+        state.selectedSource = source;
+
         // Call auto-detect API
         const response = await fetch(`${API_URL}/api/chat/auto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question })
+            body: JSON.stringify({ question, source })
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -623,6 +641,185 @@ function renderFavoritesView(mainContainer) {
     // Attach click listeners
     attachLessonCardListeners();
 }
+
+// ===== VUE MES COURS (PDFs personnels) =====
+
+async function renderMesCoursView(mainContainer) {
+    mainContainer.innerHTML = `
+        <div class="library-container">
+            <div class="library-header">
+                <h2>📄 Mes Cours</h2>
+                <p>Importe tes propres cours en PDF pour les interroger avec le chatbot</p>
+            </div>
+
+            <!-- Zone d'upload -->
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-content">
+                    <div class="upload-icon">📤</div>
+                    <h3>Glisse un PDF ici</h3>
+                    <p>ou clique pour sélectionner un fichier</p>
+                    <input type="file" id="file-input" accept=".pdf" style="display: none;">
+                    <button class="btn-primary" onclick="document.getElementById('file-input').click()">
+                        Choisir un fichier PDF
+                    </button>
+                </div>
+                <div class="upload-progress" id="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p id="progress-text">Upload en cours...</p>
+                </div>
+            </div>
+
+            <!-- Liste des PDFs -->
+            <div id="pdf-list" class="pdf-list">
+                <h3>📚 Mes documents (chargement...)</h3>
+            </div>
+        </div>
+    `;
+
+    // Setup drag & drop
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].name.endsWith('.pdf')) {
+            await uploadPDF(files[0]);
+        } else {
+            alert('Veuillez déposer un fichier PDF');
+        }
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+        if (e.target.files.length > 0) {
+            await uploadPDF(e.target.files[0]);
+        }
+    });
+
+    // Charger la liste des PDFs
+    await loadPDFList();
+}
+
+async function uploadPDF(file) {
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadContent = document.querySelector('.upload-content');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+
+    try {
+        // Afficher la barre de progression
+        uploadContent.style.display = 'none';
+        uploadProgress.style.display = 'block';
+        progressText.textContent = `Upload de ${file.name}...`;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_URL}/api/upload-pdf`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const result = await response.json();
+
+        progressFill.style.width = '100%';
+        progressText.textContent = `✅ ${result.message} (${result.nb_pages} pages, ${result.nb_chunks} chunks)`;
+
+        // Recharger la liste après 2 secondes
+        setTimeout(async () => {
+            uploadContent.style.display = 'flex';
+            uploadProgress.style.display = 'none';
+            progressFill.style.width = '0%';
+            document.getElementById('file-input').value = '';
+            await loadPDFList();
+        }, 2000);
+
+    } catch (error) {
+        console.error('Erreur upload:', error);
+        progressText.textContent = '❌ Erreur lors de l\'upload';
+        setTimeout(() => {
+            uploadContent.style.display = 'flex';
+            uploadProgress.style.display = 'none';
+        }, 2000);
+    }
+}
+
+async function loadPDFList() {
+    const pdfList = document.getElementById('pdf-list');
+
+    try {
+        const response = await fetch(`${API_URL}/api/mes-cours`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        if (data.nb_pdfs === 0) {
+            pdfList.innerHTML = `
+                <div style="text-align: center; padding: 2rem; opacity: 0.6;">
+                    <p>📂 Aucun document importé pour l'instant</p>
+                </div>
+            `;
+            return;
+        }
+
+        pdfList.innerHTML = `
+            <h3>📚 Mes documents (${data.nb_pdfs})</h3>
+            <div class="pdf-grid">
+                ${data.pdfs.map(pdf => `
+                    <div class="pdf-card">
+                        <div class="pdf-icon">📄</div>
+                        <div class="pdf-info">
+                            <h4>${pdf.filename}</h4>
+                            <p>${(pdf.size / 1024).toFixed(1)} KB • ${new Date(pdf.uploaded_at).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <button class="btn-delete" onclick="deletePDF('${pdf.filename}')">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Erreur chargement PDFs:', error);
+        pdfList.innerHTML = '<p>❌ Erreur lors du chargement</p>';
+    }
+}
+
+async function deletePDF(filename) {
+    if (!confirm(`Supprimer "${filename}" ?`)) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/mes-cours/${encodeURIComponent(filename)}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        await loadPDFList();
+
+    } catch (error) {
+        console.error('Erreur suppression:', error);
+        alert('Erreur lors de la suppression');
+    }
+}
+
+// Rendre deletePDF accessible globalement
+window.deletePDF = deletePDF;
 
 // ===== VUE DÉTAIL LEÇON =====
 

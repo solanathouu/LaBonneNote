@@ -4,7 +4,7 @@ import logging
 import sys
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 from rag import RAGChain
 from detection import auto_detect
+from pdf_service import PDFService
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -45,20 +46,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialiser la chaîne RAG au démarrage
+# Initialiser la chaîne RAG et le service PDF au démarrage
 rag_chain: Optional[RAGChain] = None
+pdf_service: Optional[PDFService] = None
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialise la chaîne RAG au démarrage de l'application."""
-    global rag_chain
+    """Initialise la chaîne RAG et le service PDF au démarrage de l'application."""
+    global rag_chain, pdf_service
     logger.info("Démarrage de l'application...")
     try:
         rag_chain = RAGChain()
         logger.info("✅ RAG Chain initialisée avec succès")
+
+        pdf_service = PDFService()
+        logger.info("✅ PDF Service initialisé avec succès")
     except Exception as e:
-        logger.error(f"❌ Erreur lors de l'initialisation du RAG: {e}")
+        logger.error(f"❌ Erreur lors de l'initialisation: {e}")
         raise
 
 
@@ -68,6 +73,7 @@ class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, description="Question de l'élève")
     niveau: Optional[str] = Field("college", description="Niveau scolaire (6eme, 5eme, 4eme, 3eme, college)")
     matiere: Optional[str] = Field(None, description="Matière optionnelle pour filtrer")
+    source: Optional[str] = Field("vikidia", description="Source des documents (vikidia, mes_cours, tous)")
 
 
 class ChatResponse(BaseModel):
@@ -110,13 +116,14 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=503, detail="RAG Chain non initialisée")
 
     try:
-        logger.info(f"Question reçue: '{request.question}' (niveau={request.niveau}, matiere={request.matiere})")
+        logger.info(f"Question reçue: '{request.question}' (niveau={request.niveau}, matiere={request.matiere}, source={request.source})")
 
         # Exécuter la chaîne RAG
         result = rag_chain.run(
             question=request.question,
             matiere=request.matiere,
-            niveau=request.niveau or "college"
+            niveau=request.niveau or "college",
+            source=request.source or "vikidia"
         )
 
         logger.info(f"Réponse générée avec {result['nb_sources']} sources")
@@ -188,7 +195,8 @@ async def chat_auto(request: ChatRequest):
         result = rag_chain.run(
             question=question,
             matiere=matiere_finale,
-            niveau=niveau_final
+            niveau=niveau_final,
+            source=request.source or "vikidia"
         )
 
         # Ajouter les infos de détection à la réponse
@@ -263,6 +271,139 @@ async def get_lecon_content(matiere: str, titre: str):
         raise
     except Exception as e:
         logger.error(f"Erreur lors de la récupération du contenu: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+# ===== ENDPOINTS PDF / MES COURS =====
+
+@app.post("/api/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+    """Upload et traite un PDF personnel.
+
+    Args:
+        file: Fichier PDF uploadé.
+
+    Returns:
+        Infos sur le PDF traité (nb_pages, nb_chunks, etc.).
+    """
+    if pdf_service is None:
+        raise HTTPException(status_code=503, detail="PDF Service non initialisé")
+
+    try:
+        # Vérifier que c'est bien un PDF
+        if not file.filename.endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="Le fichier doit être un PDF")
+
+        logger.info(f"Upload PDF: {file.filename}")
+
+        # Lire le contenu du fichier
+        content = await file.read()
+
+        # Sauvegarder le PDF
+        file_path = pdf_service.save_pdf(content, file.filename)
+
+        # Traiter le PDF (extraction + chunking + ChromaDB)
+        result = pdf_service.process_pdf(file_path)
+
+        logger.info(f"PDF traité avec succès: {result}")
+        return {
+            "status": "success",
+            "message": f"PDF '{file.filename}' importé avec succès",
+            **result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur lors de l'upload du PDF: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@app.get("/api/mes-cours")
+async def get_mes_cours():
+    """Retourne la liste des PDFs importés.
+
+    Returns:
+        Liste de PDFs avec infos (filename, size, uploaded_at).
+    """
+    if pdf_service is None:
+        raise HTTPException(status_code=503, detail="PDF Service non initialisé")
+
+    try:
+        logger.info("Récupération de la liste des PDFs")
+        pdfs = pdf_service.list_pdfs()
+
+        return {
+            "nb_pdfs": len(pdfs),
+            "pdfs": pdfs
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des PDFs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@app.delete("/api/mes-cours/{filename}")
+async def delete_cours(filename: str):
+    """Supprime un PDF importé.
+
+    Args:
+        filename: Nom du fichier à supprimer.
+
+    Returns:
+        Status de la suppression.
+    """
+    if pdf_service is None:
+        raise HTTPException(status_code=503, detail="PDF Service non initialisé")
+
+    try:
+        logger.info(f"Suppression du PDF: {filename}")
+        success = pdf_service.delete_pdf(filename)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="PDF non trouvé")
+
+        return {
+            "status": "success",
+            "message": f"PDF '{filename}' supprimé avec succès"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur lors de la suppression du PDF: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@app.post("/api/search-mes-cours")
+async def search_mes_cours(request: ChatRequest):
+    """Recherche dans les documents personnels uniquement.
+
+    Args:
+        request: Requête avec question.
+
+    Returns:
+        Résultats de recherche dans les PDFs personnels.
+    """
+    if pdf_service is None:
+        raise HTTPException(status_code=503, detail="PDF Service non initialisé")
+
+    try:
+        logger.info(f"Recherche dans Mes Cours: '{request.question}'")
+
+        results = pdf_service.search_in_personal_docs(
+            question=request.question,
+            top_k=5
+        )
+
+        return {
+            "question": request.question,
+            "nb_results": len(results),
+            "results": results
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la recherche: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
 
 

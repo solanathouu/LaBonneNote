@@ -42,15 +42,23 @@ class RAGChain:
         """
         self.top_k = top_k
         self.similarity_threshold = similarity_threshold
+        self.chroma_dir = chroma_dir
 
         # Initialiser embeddings
         logger.info(f"Initialisation embeddings: {embedding_model}")
         self.embeddings = OpenAIEmbeddings(model=embedding_model)
 
-        # Initialiser ChromaDB
+        # Initialiser ChromaDB - Collection Vikidia
         logger.info(f"Connexion à ChromaDB: {chroma_dir}")
         self.vector_store = Chroma(
             collection_name=COLLECTION_NAME,
+            embedding_function=self.embeddings,
+            persist_directory=chroma_dir
+        )
+
+        # Initialiser ChromaDB - Collection Mes Cours
+        self.vector_store_personal = Chroma(
+            collection_name="mes_cours",
             embedding_function=self.embeddings,
             persist_directory=chroma_dir
         )
@@ -64,11 +72,50 @@ class RAGChain:
 
         logger.info("RAG Chain initialisée avec succès")
 
+    def is_general_question(self, question: str) -> bool:
+        """Détecte si une question est générale (salutations, politesse) ou thématique.
+
+        Args:
+            question: La question de l'utilisateur.
+
+        Returns:
+            True si c'est une question générale, False si c'est thématique.
+        """
+        question_lower = question.lower().strip()
+
+        # Mots-clés pour questions générales (salutations, politesse, etc.)
+        general_patterns = [
+            # Salutations
+            "salut", "bonjour", "bonsoir", "coucou", "hello", "hi", "hey",
+            # Questions sur le bot
+            "qui es-tu", "qui es tu", "c'est quoi", "c est quoi", "comment tu",
+            "tu fais quoi", "tu es qui", "ton nom", "que fais-tu", "que fais tu",
+            # Politesse
+            "merci", "merci beaucoup", "d'accord", "d accord", "ok", "okay",
+            "au revoir", "bye", "à bientôt", "a bientot", "à plus", "a plus",
+            # Questions très courtes sans contexte scolaire
+            "ça va", "ca va", "comment vas-tu", "comment vas tu", "quoi de neuf"
+        ]
+
+        # Si la question est très courte (< 15 caractères) et contient un pattern général
+        if len(question_lower) < 15:
+            for pattern in general_patterns:
+                if pattern in question_lower:
+                    return True
+
+        # Si la question est exactement un pattern général
+        for pattern in general_patterns:
+            if question_lower == pattern or question_lower == pattern + "?" or question_lower == pattern + " !":
+                return True
+
+        return False
+
     def retrieve(
         self,
         question: str,
         matiere: Optional[str] = None,
-        niveau: Optional[str] = None
+        niveau: Optional[str] = None,
+        source: str = "vikidia"
     ) -> List[Document]:
         """Récupère les chunks pertinents depuis ChromaDB.
 
@@ -76,41 +123,64 @@ class RAGChain:
             question: Question de l'élève.
             matiere: Filtre optionnel par matière.
             niveau: Filtre optionnel par niveau.
+            source: Source des documents ("vikidia", "mes_cours", "tous").
 
         Returns:
             Liste de documents pertinents.
         """
-        # Construire les filtres de métadonnées
+        # Construire les filtres de métadonnées (seulement pour Vikidia)
         filters = {}
-        if matiere:
+        if matiere and source != "mes_cours":
             filters["matiere"] = matiere
-        if niveau and niveau != "college":
+        if niveau and niveau != "college" and source != "mes_cours":
             # Chercher niveau exact OU college (fallback)
             # Note: ChromaDB ne supporte pas OR, donc on fait 2 requêtes
             pass
 
-        # Recherche de similarité
-        if filters:
-            results = self.vector_store.similarity_search_with_score(
-                question,
-                k=self.top_k,
-                filter=filters
-            )
-        else:
-            results = self.vector_store.similarity_search_with_score(
+        # Recherche de similarité selon la source
+        all_results = []
+
+        if source == "vikidia" or source == "tous":
+            # Rechercher dans Vikidia
+            if filters:
+                results = self.vector_store.similarity_search_with_score(
+                    question,
+                    k=self.top_k,
+                    filter=filters
+                )
+            else:
+                results = self.vector_store.similarity_search_with_score(
+                    question,
+                    k=self.top_k
+                )
+            all_results.extend(results)
+            logger.info(f"Vikidia: {len(results)} résultats")
+
+        if source == "mes_cours" or source == "tous":
+            # Rechercher dans Mes Cours
+            results_personal = self.vector_store_personal.similarity_search_with_score(
                 question,
                 k=self.top_k
             )
+            all_results.extend(results_personal)
+            logger.info(f"Mes Cours: {len(results_personal)} résultats")
+
+        # Si "tous", limiter au top_k global et trier par score
+        if source == "tous":
+            all_results.sort(key=lambda x: x[1])  # Trier par score (ascending = meilleur)
+            all_results = all_results[:self.top_k]
 
         # Filtrer par seuil de similarité
         # Note: ChromaDB retourne distance (plus petit = plus similaire)
         # On garde seulement les résultats pertinents
         filtered_docs = []
-        for doc, score in results:
-            logger.debug(f"Document trouvé (score: {score:.3f}): {doc.metadata.get('titre', 'Sans titre')}")
+        for doc, score in all_results:
+            source_label = doc.metadata.get('source', 'unknown')
+            titre = doc.metadata.get('titre', doc.metadata.get('filename', 'Sans titre'))
+            logger.debug(f"Document trouvé (score: {score:.3f}, source: {source_label}): {titre}")
             filtered_docs.append(doc)
 
-        logger.info(f"Retrieval: {len(filtered_docs)} chunks pertinents trouvés")
+        logger.info(f"Retrieval ({source}): {len(filtered_docs)} chunks pertinents trouvés")
         return filtered_docs
 
     def generate(
@@ -159,7 +229,8 @@ class RAGChain:
         self,
         question: str,
         matiere: Optional[str] = None,
-        niveau: str = "college"
+        niveau: str = "college",
+        source: str = "vikidia"
     ) -> Dict[str, any]:
         """Exécute la chaîne RAG complète.
 
@@ -167,14 +238,47 @@ class RAGChain:
             question: Question de l'élève.
             matiere: Filtre optionnel par matière.
             niveau: Niveau scolaire (6eme, 5eme, 4eme, 3eme, college).
+            source: Source des documents ("vikidia", "mes_cours", "tous").
 
         Returns:
             Dict avec la réponse et les sources.
         """
-        logger.info(f"RAG Query: '{question}' (matiere={matiere}, niveau={niveau})")
+        logger.info(f"RAG Query: '{question}' (matiere={matiere}, niveau={niveau}, source={source})")
 
+        # Vérifier si c'est une question générale (salutations, etc.)
+        if self.is_general_question(question):
+            logger.info("Question générale détectée - réponse sans sources")
+
+            # Réponses amicales pour questions générales
+            general_responses = {
+                "salut": "Salut ! 👋 Je suis ton assistant scolaire. Pose-moi des questions sur tes cours de collège (maths, français, histoire-géo, SVT, physique-chimie, etc.) et je t'aiderai avec plaisir !",
+                "bonjour": "Bonjour ! 😊 Je suis là pour t'aider avec tes cours de collège. N'hésite pas à me poser des questions sur les matières que tu étudies !",
+                "merci": "De rien ! 😊 N'hésite pas si tu as d'autres questions sur tes cours !",
+                "ça va": "Je vais bien, merci ! 😊 Et toi, as-tu des questions sur tes cours ? Je suis là pour t'aider !",
+                "qui es-tu": "Je suis un assistant scolaire qui t'aide avec tes cours de collège ! 📚 Je peux répondre à tes questions sur toutes les matières : maths, français, histoire-géo, SVT, physique-chimie, technologie, anglais et espagnol. Pose-moi une question !",
+            }
+
+            # Trouver une réponse appropriée
+            question_lower = question.lower().strip()
+            answer = None
+            for key, response in general_responses.items():
+                if key in question_lower:
+                    answer = response
+                    break
+
+            # Réponse par défaut si aucun match
+            if not answer:
+                answer = "Bonjour ! 😊 Je suis ton assistant scolaire pour le collège. Pose-moi des questions sur tes cours et je t'aiderai !"
+
+            return {
+                "answer": answer,
+                "sources": [],
+                "nb_sources": 0
+            }
+
+        # Question thématique : procéder avec le RAG normal
         # 1. Retrieval
-        documents = self.retrieve(question, matiere, niveau)
+        documents = self.retrieve(question, matiere, niveau, source)
 
         # 2. Generation
         answer = self.generate(question, documents, niveau)
@@ -182,11 +286,16 @@ class RAGChain:
         # 3. Préparer les sources
         sources = []
         for doc in documents:
+            # Déterminer le titre selon la source
+            titre = doc.metadata.get("titre", doc.metadata.get("filename", "Sans titre"))
+
             sources.append({
-                "titre": doc.metadata.get("titre", "Sans titre"),
+                "titre": titre,
                 "url": doc.metadata.get("url", ""),
                 "matiere": doc.metadata.get("matiere", ""),
-                "source": doc.metadata.get("source", "")
+                "source": doc.metadata.get("source", ""),
+                "filename": doc.metadata.get("filename", ""),
+                "page": doc.metadata.get("page", 0)
             })
 
         return {
