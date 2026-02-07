@@ -22,8 +22,6 @@ const state = {
  * Navigue vers une vue avec des paramètres optionnels
  */
 function navigateTo(view, params = {}) {
-    console.log(`📍 Navigation: ${view}`, params);
-
     state.view = view;
     Object.assign(state, params);
 
@@ -52,14 +50,15 @@ function buildURL(view, params) {
  * Rend la vue actuelle
  */
 function renderView() {
-    console.log(`🎨 Rendering view: ${state.view}`);
-
     const mainContainer = document.getElementById('app-main');
     const inputFooter = document.getElementById('input-footer');
 
     // Clear containers
     mainContainer.innerHTML = '';
     inputFooter.innerHTML = '';
+
+    // Reset dataset when changing views
+    delete mainContainer.dataset.currentMatiere;
 
     // Update nav toggle buttons
     document.querySelectorAll('.toggle-btn').forEach(btn => {
@@ -275,51 +274,73 @@ async function renderLibraryView(mainContainer) {
         return;
     }
 
-    // Show loading
-    mainContainer.innerHTML = `
-        <div class="library-container">
-            <div class="library-header">
-                <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
-                <p>Chargement des leçons...</p>
-            </div>
-            <div class="lessons-loading">
-                ${createSkeletonCard()}
-                ${createSkeletonCard()}
-                ${createSkeletonCard()}
-            </div>
-        </div>
-    `;
+    // Vérifier si le contenu affiché correspond déjà à la matière sélectionnée
+    const currentGridMatiere = mainContainer.dataset.currentMatiere;
+    if (currentGridMatiere === state.selectedMatiere) {
+        return;
+    }
+
+    // Check if lessons are already in cache
+    const cachedLessons = state.lessonsCache[state.selectedMatiere];
 
     try {
-        // Fetch lessons from API
-        const response = await fetch(`${API_URL}/api/lecons/${state.selectedMatiere}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        // Fetch lessons from API (or use cache)
+        let lessons;
+        if (cachedLessons) {
+            lessons = cachedLessons;
+        } else {
+            // Show temporary loading message (no skeleton)
+            mainContainer.innerHTML = `
+                <div class="library-container">
+                    <div class="library-header">
+                        <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
+                        <p>⏳ Chargement des leçons...</p>
+                    </div>
+                </div>
+            `;
 
-        const data = await response.json();
-        state.lessonsCache[state.selectedMatiere] = data.lecons;
+            const response = await fetch(`${API_URL}/api/lecons/${state.selectedMatiere}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            lessons = data.lecons;
+            state.lessonsCache[state.selectedMatiere] = lessons;
+        }
 
         // Render lessons
         mainContainer.innerHTML = `
             <div class="library-container">
                 <div class="library-header">
                     <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
-                    <p>${data.nb_lecons} leçons disponibles</p>
+                    <p>${lessons.length} leçons disponibles</p>
                 </div>
 
                 <div class="lessons-grid" id="lessons-grid">
-                    ${data.lecons.map((lesson, i) => createLessonCard(lesson, i)).join('')}
+                    ${lessons.map((lesson, i) => createLessonCard(lesson, i)).join('')}
                 </div>
             </div>
         `;
 
+        // Marquer le container avec la matière actuellement affichée
+        mainContainer.dataset.currentMatiere = state.selectedMatiere;
+
         // Attach click listeners
         document.querySelectorAll('.lesson-card').forEach(card => {
-            card.querySelector('.btn-read')?.addEventListener('click', () => {
+            // Click sur toute la carte = ouvrir la leçon
+            card.addEventListener('click', () => {
                 const titre = card.dataset.titre;
                 navigateTo('lesson', { selectedMatiere: state.selectedMatiere, selectedLesson: titre });
             });
 
-            card.querySelector('.btn-ask')?.addEventListener('click', () => {
+            // Bouton "Lire" garde le même comportement (déjà géré par le click sur la carte)
+            card.querySelector('.btn-read')?.addEventListener('click', (e) => {
+                e.stopPropagation(); // Éviter double navigation
+                const titre = card.dataset.titre;
+                navigateTo('lesson', { selectedMatiere: state.selectedMatiere, selectedLesson: titre });
+            });
+
+            // Bouton "Poser une question" a un comportement différent
+            card.querySelector('.btn-ask')?.addEventListener('click', (e) => {
+                e.stopPropagation(); // Empêcher le click sur la carte
                 const titre = card.dataset.titre;
                 navigateTo('chat');
                 setTimeout(() => {
@@ -344,12 +365,18 @@ async function renderLibraryView(mainContainer) {
 }
 
 function createLessonCard(lesson, index) {
+    // Nettoyer le résumé des crochets et le tronquer si trop long
+    let cleanResume = lesson.resume.replace(/^\[.+?\]\s*/gm, '').replace(/\n\[.+?\]\s*/g, '\n');
+    if (cleanResume.length > 150) {
+        cleanResume = cleanResume.substring(0, 150) + '...';
+    }
+
     return `
         <div class="lesson-card" data-titre="${lesson.titre}" style="animation-delay: ${index * 50}ms">
             <div class="lesson-icon">${getSubjectIcon(lesson.matiere)}</div>
             <div class="lesson-content">
                 <h3 class="lesson-title">${lesson.titre}</h3>
-                <p class="lesson-resume">${lesson.resume}</p>
+                <p class="lesson-resume">${cleanResume}</p>
                 <div class="lesson-meta">
                     <span class="lesson-niveau">${lesson.niveau}</span>
                     <span class="lesson-chunks">${lesson.nb_chunks} sections</span>
@@ -388,7 +415,6 @@ async function renderLessonView(mainContainer) {
         const titre = encodeURIComponent(state.selectedLesson);
         const url = `${API_URL}/api/lecons/${state.selectedMatiere}/detail?titre=${titre}`;
 
-        console.log('Fetching lesson:', url);
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -414,7 +440,7 @@ async function renderLessonView(mainContainer) {
                 <div class="lesson-body">
                     <div class="lesson-resume-section">
                         <h3>📝 Résumé</h3>
-                        <p>${lesson.resume}</p>
+                        <div class="lesson-text">${formatMarkdown(lesson.resume)}</div>
                         <button id="btn-show-full" class="btn-expand">📖 Lire le contenu complet</button>
                     </div>
 
@@ -549,7 +575,6 @@ function createBotMessage(text, sources = [], detection = null) {
                 const matiere = btn.dataset.matiere;
                 const titre = btn.dataset.titre;
 
-                console.log('📚 Navigation vers leçon:', titre, 'dans', matiere);
                 navigateTo('lesson', {
                     selectedMatiere: matiere,
                     selectedLesson: titre
@@ -682,6 +707,14 @@ function createSkeletonCard() {
 function formatMarkdown(text) {
     let formatted = text;
 
+    // Supprimer les contenus entre crochets au début des lignes/paragraphes
+    formatted = formatted.replace(/^\[.+?\]\s*/gm, '');
+    formatted = formatted.replace(/\n\[.+?\]\s*/g, '\n');
+
+    // Détecter et formater les titres de sections (lignes courtes sans ponctuation finale)
+    // Un titre : commence par une majuscule, moins de 80 caractères, pas de point final
+    formatted = formatted.replace(/^([A-ZÀ-Ÿ][^\n]{5,79}[^\.\!\?\:\n])$/gm, '<strong>$1</strong>');
+
     // Convertir les titres Markdown en gras souligné (#### -> <strong><u>)
     formatted = formatted.replace(/^####\s+(.+)$/gm, '<strong><u>$1</u></strong>');
     formatted = formatted.replace(/^###\s+(.+)$/gm, '<strong><u>$1</u></strong>');
@@ -782,8 +815,8 @@ function attachGlobalListeners() {
             document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            // Update theme
-            document.body.setAttribute('data-theme', matiere);
+            // Update subject (for accent color) - not theme (dark/light)
+            document.body.setAttribute('data-subject', matiere);
 
             // Navigate to library with selected matiere
             navigateTo('library', { selectedMatiere: matiere });
@@ -800,12 +833,50 @@ function attachGlobalListeners() {
     });
 }
 
+// ===== THEME MANAGEMENT =====
+
+function updateThemeIcon(theme) {
+    const themeIcon = document.querySelector('.theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+}
+
+function initTheme() {
+    // Charger le thème sauvegardé ou détecter la préférence système
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+    document.body.setAttribute('data-theme', theme);
+    updateThemeIcon(theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+    document.body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+}
+
+function setupThemeToggle() {
+    const themeToggleBtn = document.getElementById('theme-toggle');
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+}
+
 // ===== INITIALIZATION =====
 
 function init() {
     console.log('📖 Cahier Numérique SPA - Initializing...');
 
+    initTheme();
     attachGlobalListeners();
+    setupThemeToggle();
 
     // Parse initial URL
     const hash = window.location.hash;
