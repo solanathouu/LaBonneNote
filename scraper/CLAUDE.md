@@ -24,15 +24,22 @@ scraper/
 - Navigation par catégories pour cibler les matières
 - Contenu adapté aux 8-13 ans
 
-### Wikiversité (fr.wikiversity.org)
+### Wikiversité (fr.wikiversity.org) - ❌ ABANDONNÉ
 - API MediaWiki : `https://fr.wikiversity.org/w/api.php`
-- Cours structurés en leçons avec niveaux
-- Navigation par catégories et départements
+- **Problème** : 507 pages scrapées, seulement 2 leçons exploitables (0.4%)
+- 99.6% des pages sont vides, des stubs ou des redirections
+- Navigation par catégories et départements (niveau 7-13 = 6ème-3ème)
 
-### Éduscol (eduscol.education.fr)
+### Académie en Ligne (CNED) - ❌ ABANDONNÉ
+- Tentative de scraping pour obtenir cours par niveau (6ème-3ème)
+- **Problème** : URLs obsolètes, site restructuré
+- Seulement 8 pages extraites (concours post-bac, hors périmètre)
+
+### Éduscol (eduscol.education.fr) - ⏳ NON TENTÉ
 - Pas d'API publique → scraping HTTP avec BeautifulSoup
 - Cibler les pages programmes cycle 3 et cycle 4
 - Respecter les délais entre requêtes (1-2s)
+- **Note** : Organise par cycles (3 et 4), pas par niveaux spécifiques
 
 ## Format de sortie (chunk)
 Chaque chunk produit doit contenir :

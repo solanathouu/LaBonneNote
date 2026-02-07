@@ -3,15 +3,22 @@
 ## Rôle
 API REST FastAPI qui reçoit les questions des élèves, interroge ChromaDB, et retourne des réponses générées par GPT-4o-mini à partir uniquement des cours stockés.
 
+## État actuel
+✅ **CRÉÉ** - Backend opérationnel avec 3 fichiers :
+- `main.py` : App FastAPI avec endpoints /api/chat, /api/matieres, /api/niveaux, /health
+- `rag.py` : Classe RAGChain avec retrieve(), generate(), run()
+- `prompts.py` : Prompts adaptés par niveau (6ème, 5ème, 4ème, 3ème, college)
+
+⏳ **À tester** une fois l'ingestion ChromaDB terminée (actuellement 90%)
+
 ## Architecture
 ```
 backend/
 ├── __init__.py
-├── main.py          # App FastAPI, routes, static files
-├── rag.py           # Chaîne RAG LangChain (retrieval + generation)
-├── embeddings.py    # Connexion ChromaDB + embedding OpenAI
-└── prompts.py       # Prompts système pour contraindre le LLM
-```
+├── main.py          # ✅ App FastAPI, routes, CORS, validation Pydantic
+├── rag.py           # ✅ Chaîne RAG LangChain (retrieval + generation)
+├── prompts.py       # ✅ Prompts système adaptés par niveau (6ème-3ème)
+└── ingest_chromadb.py  # Script d'ingestion (à exécuter une fois)
 
 ## Endpoints API
 ```

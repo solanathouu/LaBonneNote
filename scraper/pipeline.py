@@ -13,6 +13,7 @@ from pathlib import Path
 from .cleaner import nettoyer_texte
 from .chunker import decouper_en_chunks
 from .vikidia import VikidiaScraper
+from .wikiversite import WikiversiteScraper
 
 # Configuration du logging
 logging.basicConfig(
@@ -119,6 +120,61 @@ def run_vikidia(matiere: str | None = None) -> None:
             sauvegarder_chunks(chunks, m)
 
 
+def run_wikiversite(niveau: int | None = None) -> None:
+    """Lance le pipeline complet pour Wikiversité.
+
+    Args:
+        niveau: Si spécifié, ne scrape que ce niveau (7-13).
+    """
+    scraper = WikiversiteScraper()
+
+    if niveau:
+        logger.info("Scraping Wikiversité - niveau: %d", niveau)
+        lecons = scraper.scraper_niveau(niveau)
+        chunks = traiter_articles(lecons)
+
+        # Grouper par matière pour sauvegarde
+        par_matiere: dict[str, list[dict]] = {}
+        for chunk in chunks:
+            m = chunk["metadata"]["matiere"]
+            par_matiere.setdefault(m, []).append(chunk)
+
+        for m, chks in par_matiere.items():
+            # Charger les chunks existants si présents
+            fichier_existant = DOSSIER_PROCESSED / m / "chunks.json"
+            chunks_existants = []
+            if fichier_existant.exists():
+                with open(fichier_existant, "r", encoding="utf-8") as f:
+                    chunks_existants = json.load(f)
+
+            # Combiner avec les nouveaux chunks
+            tous_chunks = chunks_existants + chks
+            sauvegarder_chunks(tous_chunks, m)
+    else:
+        logger.info("Scraping Wikiversité - tous les niveaux collège")
+        lecons = scraper.scraper_tout()
+
+        # Grouper par matière
+        par_matiere: dict[str, list[dict]] = {}
+        chunks = traiter_articles(lecons)
+        for chunk in chunks:
+            m = chunk["metadata"]["matiere"]
+            par_matiere.setdefault(m, []).append(chunk)
+
+        for m, chks in par_matiere.items():
+            # Charger les chunks existants de Vikidia si présents
+            fichier_existant = DOSSIER_PROCESSED / m / "chunks.json"
+            chunks_existants = []
+            if fichier_existant.exists():
+                with open(fichier_existant, "r", encoding="utf-8") as f:
+                    chunks_existants = json.load(f)
+                logger.info("Fusion avec %d chunks existants pour %s", len(chunks_existants), m)
+
+            # Combiner Vikidia + Wikiversité
+            tous_chunks = chunks_existants + chks
+            sauvegarder_chunks(tous_chunks, m)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Pipeline de scraping pour le chatbot scolaire"
@@ -134,13 +190,19 @@ def main():
         default="vikidia",
         help="Source à scraper (par défaut: vikidia)",
     )
+    parser.add_argument(
+        "--niveau",
+        type=int,
+        choices=[7, 8, 9, 10, 11, 12, 13],
+        help="Pour Wikiversité: scraper un seul niveau (7-13)",
+    )
 
     args = parser.parse_args()
 
     if args.source == "vikidia":
         run_vikidia(args.matiere)
     elif args.source == "wikiversite":
-        logger.error("Scraper Wikiversité pas encore implémenté")
+        run_wikiversite(args.niveau)
     elif args.source == "eduscol":
         logger.error("Scraper Éduscol pas encore implémenté")
 

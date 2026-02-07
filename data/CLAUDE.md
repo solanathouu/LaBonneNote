@@ -7,13 +7,16 @@ Stockage des données scrapées brutes et des chunks traités.
 ```
 data/
 ├── raw/             # Données brutes telles que scrapées (JSON)
-│   ├── vikidia/     # Articles Vikidia par matière
-│   ├── wikiversite/ # Cours Wikiversité par matière
-│   └── eduscol/     # Pages Éduscol par cycle
-└── processed/       # Chunks prêts pour l'embedding (JSON)
-    ├── mathematiques/
-    ├── francais/
-    └── histoire_geo/
+│   └── vikidia/     # ✅ Articles Vikidia par matière (24 321 articles)
+└── processed/       # ✅ Chunks prêts pour l'embedding (43 857 chunks JSON)
+    ├── mathematiques_chunks.json
+    ├── francais_chunks.json
+    ├── histoire_geo_chunks.json
+    ├── svt_chunks.json
+    ├── physique_chimie_chunks.json
+    ├── technologie_chunks.json
+    ├── anglais_chunks.json
+    └── espagnol_chunks.json
 ```
 
 ## Formats

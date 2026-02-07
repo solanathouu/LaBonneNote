@@ -6,18 +6,20 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 ## Current Project State
 | Aspect | Status |
 |--------|--------|
-| Scraper Vikidia | TERMINE - 8 matieres scrapees (24 321 articles, 43 857 chunks) |
-| Scraper Wikiversite | Pas encore implemente |
-| Scraper Eduscol | Pas encore implemente |
-| Backend FastAPI | Pas encore implemente (structure prete) |
-| Frontend | Pas encore implemente (structure prete) |
-| ChromaDB ingestion | Pas encore implemente |
-| Tests | Aucun |
+| Scraper Vikidia | ✅ TERMINE - 8 matieres scrapees (24 321 articles, 43 857 chunks) |
+| Scraper Wikiversite | ❌ ABANDONNE - 0.4% pages exploitables (507 pages testees, 2 lessons) |
+| Scraper Academie en Ligne | ❌ ABANDONNE - URLs obsoletes (8 pages irrelevantes) |
+| ChromaDB ingestion | ✅ TERMINE - 43 870 documents ingeres dans 'cours_college' |
+| Backend FastAPI | ✅ CREE - 3 fichiers (main.py, rag.py, prompts.py) |
+| Frontend | ⏳ Pas encore implemente (structure prete) |
+| Tests | ⏳ Aucun |
 
 ## Next Immediate Action
-1. Verifier les donnees scrapees dans `data/raw/vikidia/` et `data/processed/`
-2. Implementer le script d'ingestion ChromaDB (embeddings OpenAI -> ChromaDB)
-3. Implementer le backend FastAPI + chaine RAG LangChain
+1. ✅ ~~Verifier les donnees scrapees dans `data/raw/vikidia/` et `data/processed/`~~
+2. ✅ ~~Finaliser l'ingestion ChromaDB~~
+3. ✅ ~~Implementer le backend FastAPI + chaine RAG LangChain~~
+4. ⏳ **NEXT: Tester le backend RAG** (`uvicorn backend.main:app --reload`)
+5. ⏳ Creer le frontend HTML/CSS/JS
 
 ## Stack technique
 - **Backend** : Python 3.11+ / FastAPI / LangChain
@@ -48,9 +50,15 @@ RAG/
 ```
 
 ## Sources de donnees
-- **Vikidia** : articles encyclopediques adaptes aux collegiens (API MediaWiki) - IMPLEMENTE
-- **Wikiversite** : cours structures niveau college (API MediaWiki) - A FAIRE
-- **Eduscol** : programmes officiels Education Nationale (scraping HTTP) - A FAIRE
+- **Vikidia** : articles encyclopediques adaptes aux collegiens (API MediaWiki) - ✅ UTILISE (43 857 chunks)
+- **Wikiversite** : cours structures niveau college (API MediaWiki) - ❌ ABANDONNE (99.6% pages vides)
+- **Academie en Ligne (CNED)** : cours par niveau - ❌ ABANDONNE (site restructure, URLs obsoletes)
+
+## Strategie d'adaptation par niveau
+Comme les sources alternatives (Wikiversite, Academie en Ligne) n'ont pas de contenu exploitable, l'adaptation par niveau se fait via **prompts GPT personnalises** :
+- Tous les chunks Vikidia sont tagges `niveau: "college"` (generique)
+- Le backend utilise des prompts adaptes selon le niveau de l'eleve (6eme, 5eme, 4eme, 3eme)
+- GPT-4o-mini adapte le langage et les explications au niveau specifie dans la requete
 
 ## Matieres
 | Matiere | Source Vikidia | Articles | Chunks |
