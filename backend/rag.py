@@ -194,3 +194,140 @@ class RAGChain:
             "sources": sources,
             "nb_sources": len(sources)
         }
+
+    def get_all_lessons(
+        self,
+        matiere: str,
+        niveau: Optional[str] = None,
+        limit: int = 100
+    ) -> List[Dict[str, any]]:
+        """Récupère la liste de toutes les leçons disponibles pour une matière.
+
+        Args:
+            matiere: Matière à filtrer.
+            niveau: Niveau optionnel (6eme, 5eme, 4eme, 3eme).
+            limit: Nombre maximum de leçons à retourner.
+
+        Returns:
+            Liste de dicts avec titre, url, resume, niveau, nb_chunks.
+        """
+        logger.info(f"Fetching lessons: matiere={matiere}, niveau={niveau}")
+
+        # Construire le filtre avec opérateur ChromaDB
+        if niveau and niveau != "college":
+            # Filtrer par matière ET niveau
+            filters = {
+                "$and": [
+                    {"matiere": {"$eq": matiere}},
+                    {"niveau": {"$eq": niveau}}
+                ]
+            }
+        else:
+            # Filtrer uniquement par matière
+            filters = {"matiere": {"$eq": matiere}}
+
+        # Récupérer tous les documents de la matière (sans query spécifique)
+        # On utilise une query générique pour obtenir tous les docs
+        try:
+            collection = self.vector_store._collection
+            results = collection.get(
+                where=filters,
+                limit=limit * 10  # On récupère plus car il y a plusieurs chunks par leçon
+            )
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des leçons: {e}")
+            return []
+
+        # Grouper par titre (chaque leçon a plusieurs chunks)
+        lessons_map = {}
+        if results and results.get("metadatas"):
+            for metadata, doc_id in zip(results["metadatas"], results["ids"]):
+                titre = metadata.get("titre", "Sans titre")
+                if titre not in lessons_map:
+                    # Prendre les 200 premiers caractères comme résumé
+                    page_content = results["documents"][results["ids"].index(doc_id)]
+                    resume = page_content[:200] + "..." if len(page_content) > 200 else page_content
+
+                    lessons_map[titre] = {
+                        "titre": titre,
+                        "url": metadata.get("url", ""),
+                        "resume": resume,
+                        "matiere": metadata.get("matiere", ""),
+                        "niveau": metadata.get("niveau", "college"),
+                        "source": metadata.get("source", ""),
+                        "nb_chunks": 1
+                    }
+                else:
+                    lessons_map[titre]["nb_chunks"] += 1
+
+        # Convertir en liste et trier par titre
+        lessons = sorted(lessons_map.values(), key=lambda x: x["titre"])
+        logger.info(f"Found {len(lessons)} unique lessons")
+
+        return lessons[:limit]
+
+    def get_lesson_content(
+        self,
+        matiere: str,
+        titre: str
+    ) -> Optional[Dict[str, any]]:
+        """Récupère le contenu complet d'une leçon spécifique.
+
+        Args:
+            matiere: Matière de la leçon.
+            titre: Titre exact de la leçon.
+
+        Returns:
+            Dict avec titre, resume, contenu_complet, url, niveau, nb_chunks.
+        """
+        logger.info(f"Fetching lesson content: {titre} (matiere={matiere})")
+
+        # Récupérer tous les chunks de cette leçon
+        # ChromaDB nécessite l'opérateur $and pour plusieurs conditions
+        filters = {
+            "$and": [
+                {"matiere": {"$eq": matiere}},
+                {"titre": {"$eq": titre}}
+            ]
+        }
+
+        try:
+            collection = self.vector_store._collection
+            logger.info(f"Querying ChromaDB with filters: {filters}")
+            results = collection.get(
+                where=filters,
+                limit=1000  # Une leçon peut avoir beaucoup de chunks
+            )
+            logger.info(f"ChromaDB returned {len(results.get('documents', []))} documents")
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération du contenu: {e}", exc_info=True)
+            return None
+
+        if not results or not results.get("documents"):
+            logger.warning(f"Aucun contenu trouvé pour: {titre} dans {matiere}")
+            logger.warning(f"Filters used: {filters}")
+            return None
+
+        # Reconstruire le contenu complet en concaténant les chunks
+        chunks = []
+        metadata = None
+        for doc_content, meta in zip(results["documents"], results["metadatas"]):
+            chunks.append(doc_content)
+            if metadata is None:
+                metadata = meta
+
+        contenu_complet = "\n\n".join(chunks)
+        resume = chunks[0][:300] + "..." if len(chunks[0]) > 300 else chunks[0]
+
+        logger.info(f"Lesson content retrieved: {len(chunks)} chunks")
+
+        return {
+            "titre": titre,
+            "resume": resume,
+            "contenu_complet": contenu_complet,
+            "url": metadata.get("url", "") if metadata else "",
+            "matiere": metadata.get("matiere", "") if metadata else matiere,
+            "niveau": metadata.get("niveau", "college") if metadata else "college",
+            "source": metadata.get("source", "") if metadata else "",
+            "nb_chunks": len(chunks)
+        }

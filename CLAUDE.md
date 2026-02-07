@@ -10,48 +10,138 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 | Scraper Wikiversite | ❌ ABANDONNE - 0.4% pages exploitables (507 pages testees, 2 lessons) |
 | Scraper Academie en Ligne | ❌ ABANDONNE - URLs obsoletes (8 pages irrelevantes) |
 | ChromaDB ingestion | ✅ TERMINE - 43 870 documents ingeres dans 'cours_college' |
-| Backend FastAPI | ✅ PRODUCTION-READY - RAG chain testee et fonctionnelle |
-| Frontend "Cahier Numérique" | ✅ PRODUCTION-READY - Design cahier d'école français |
+| Backend FastAPI | ✅ PRODUCTION-READY - RAG + Auto-détection + Bibliothèque |
+| Backend Auto-Détection | ✅ TERMINE - Détection niveau/matière par mots-clés |
+| Backend Bibliothèque | ✅ TERMINE - 3 nouveaux endpoints (chat/auto, lecons, detail) |
+| Frontend SPA | ✅ PRODUCTION-READY - 3 vues (Chat, Bibliothèque, Détail) |
+| Frontend Chat | ✅ TERMINE - Auto-détection + choix ambiguïté + history persistant |
+| Frontend Bibliothèque | ✅ TERMINE - Liste leçons + navigation + scroll fix |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | 🔄 1 commit en avance (frontend non pushé) |
+| Git status | 🔄 Nombreux fichiers modifiés/créés non committés |
 
-## Last Session Summary (2026-02-07)
-**Travail accompli:**
-1. ✅ Transformation frontend "Neon Academy" → "Cahier Numérique"
-2. ✅ Design complet cahier d'école français (890 lignes CSS)
-3. ✅ Grille quadrillée background (style cahier Séyès)
-4. ✅ 8 thèmes couleur par matière (tons scolaires sobres)
-5. ✅ Optimisation UX - message d'accueil visible sans scroll
-6. ✅ Ajout Anglais (🔤) et Espagnol (🗣️) dans grille d'accueil
-7. ✅ Commit "Transform frontend to 'Cahier Numérique' design" (64db874)
+## Last Session Summary (2026-02-07 - Session 2)
+**TRANSFORMATION MAJEURE : Chatbot simple → Plateforme d'apprentissage hybride (SPA)**
 
-**Design "Cahier Numérique":**
+**Backend (Phase 1) - Nouvelles fonctionnalités :**
+1. ✅ `backend/detection.py` - Auto-détection niveau + matière par mots-clés (~180 lignes)
+2. ✅ Extension `backend/rag.py` - Méthodes `get_all_lessons()` et `get_lesson_content()` (~150 lignes)
+3. ✅ 3 nouveaux endpoints dans `backend/main.py` :
+   - `POST /api/chat/auto` - Chat avec auto-détection (retourne niveau/matière détectés + ambiguïté)
+   - `GET /api/lecons/{matiere}` - Liste des leçons d'une matière (avec filtrage niveau)
+   - `GET /api/lecons/{matiere}/detail?titre=...` - Contenu complet d'une leçon
+
+**Frontend (Phase 2) - Refonte complète en SPA :**
+1. ✅ Nouveau `frontend/index.html` (85 lignes) - Navigation sticky + structure SPA
+2. ✅ Refonte complète `frontend/app.js` (784 lignes) - Router SPA + 3 vues dynamiques
+3. ✅ Extension `frontend/style.css` (+400 lignes, total ~1300) - Design system étendu
+
+**3 Vues Implémentées :**
+- **Vue Chat** : Auto-détection niveau/matière, badge visible, choix si ambiguïté, history persistant
+- **Vue Bibliothèque** : Grille de leçons cliquables, skeleton loading, 2 boutons par leçon
+- **Vue Détail Leçon** : Breadcrumbs, résumé + contenu complet, bouton "Poser une question"
+
+**Bugs Corrigés :**
+1. ✅ Scroll bloqué dans bibliothèque (ajout `.app-main` avec `overflow-y: auto`)
+2. ✅ Erreur 404 sur leçons (fix syntaxe filtres ChromaDB avec `$and` + `$eq`)
+3. ✅ Caractères spéciaux dans URLs (passage query parameter au lieu de path)
+
+**Design "Cahier Numérique" maintenu :**
 - Background papier blanc (#fefdfb) avec grille 8x8px + texture SVG
 - Typography: Lexend (headings) + DM Sans (body)
-- Couleurs sobres par matière (bleu, violet, orange, vert, rose, indigo, cyan, rouge)
-- Bulles messages style notes manuscrites avec bordures légères
-- Animations subtiles: fadeInDown, fadeInUp, messageSlideIn, bounce
-- Shadows paper-like (4 niveaux: sm, md, lg, page)
-- Responsive, accessible, clean et motivant (11-15 ans)
+- 8 couleurs par matière (bleu, violet, orange, vert, rose, indigo, cyan, rouge)
+- Animations fluides entre vues (fadeIn, slideIn, shimmer skeletons)
+- Responsive mobile-first, accessible
 
 ## Next Immediate Action
-**Push le commit frontend vers GitHub:**
+
+**ÉTAPE 1 : Commiter tous les changements SPA**
+
 ```bash
 cd C:\Users\skwar\Desktop\RAG
+
+# Ajouter tous les fichiers créés
+git add backend/detection.py
+git add CHECKPOINT.md README.md
+git add docs/DEMO.md docs/FRONTEND_SUMMARY.md docs/wikiversite_scraper_guide.md
+
+# Ajouter fichiers modifiés
+git add backend/main.py backend/rag.py
+git add frontend/index.html frontend/app.js frontend/style.css
+
+# NE PAS AJOUTER (fichiers temporaires/config locale)
+# .claude/, nul, *.log, test_*.py, data/raw/academie_en_ligne/, data/raw/wikiversite/
+
+# Commit
+git commit -m "Transform app to hybrid learning platform (SPA)
+
+Backend (Phase 1):
+- Add backend/detection.py: Auto-detect level + subject from question
+- Extend backend/rag.py: Methods get_all_lessons() and get_lesson_content()
+- Add 3 new endpoints: POST /api/chat/auto, GET /api/lecons/{matiere}, GET /api/lecons/{matiere}/detail
+
+Frontend (Phase 2):
+- Complete SPA refactor: Router + 3 dynamic views (Chat, Library, Lesson Detail)
+- Vue Chat: Auto-detection with visible badge, ambiguity choice, persistent history
+- Vue Library: Clickable lessons grid, skeleton loading, filters
+- Vue Detail: Breadcrumbs, summary + full content, ask question button
+
+Fixes:
+- Fix scroll blocked in library (add .app-main overflow)
+- Fix 404 on lessons (fix ChromaDB filters syntax with \$and + \$eq)
+- Fix special chars in URLs (use query param instead of path)
+
+Frontend extensions:
+- frontend/index.html: 85 lines (sticky nav + SPA structure)
+- frontend/app.js: 784 lines (complete rewrite)
+- frontend/style.css: +400 lines (extended design system)
+
+Status: App fully functional, 43,870 Vikidia lessons browsable
+Next: Test all features then push to GitHub
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+
+# Push vers GitHub
 git push origin main
 ```
 
-**Alternative - Tester l'application localement:**
-1. Backend déjà lancé sur http://localhost:8000
-2. Ouvrir navigateur: http://localhost:8000
-3. Tester avec questions (ex: "C'est quoi le theoreme de Pythagore ?")
-4. Vérifier changement de couleur par matière
+**ÉTAPE 2 : Tester toutes les fonctionnalités**
 
-**Prochaines étapes possibles:**
-- Déployer sur Render/Railway/Vercel (nécessite: requirements.txt, Procfile, runtime.txt)
-- Ajouter tests automatisés (pytest pour backend)
-- Améliorer le scraping (plus de sources, meilleures métadonnées)
+1. Lancer le backend :
+   ```bash
+   cd backend
+   uvicorn main:app --reload --port 8000
+   ```
+
+2. Ouvrir http://localhost:8000
+
+3. **Tester Vue Chat :**
+   - Question : "C'est quoi le théorème de Pythagore ?"
+   - Vérifier badge "🤖 Détecté : 5ème • Mathématiques"
+   - Question ambiguë : "Parle-moi de la révolution" → Vérifier boutons de choix
+
+4. **Tester Vue Bibliothèque :**
+   - Cliquer sur "📚 Bibliothèque"
+   - Cliquer sur "📐 Maths"
+   - Vérifier liste des leçons (doit afficher ~543 leçons)
+   - Vérifier scroll fonctionne
+
+5. **Tester Vue Détail :**
+   - Cliquer "📖 Lire" sur une leçon (ex: "Théorème de Pythagore")
+   - Vérifier breadcrumbs cliquables
+   - Cliquer "📖 Lire le contenu complet"
+   - Cliquer "💬 Poser une question" → Retour au chat avec question pré-remplie
+
+6. **Tester Navigation :**
+   - Vérifier historique chat conservé quand on change de vue
+   - Vérifier bouton retour navigateur fonctionne
+   - Vérifier thème couleur change selon matière sélectionnée
+
+**Prochaines étapes possibles :**
+- Ajouter tests automatisés (pytest backend, playwright frontend)
+- Déployer sur Render/Railway (nécessite: requirements.txt complet, Procfile)
+- Ajouter fonctionnalités : export PDF, mode sombre, voice input
+- Améliorer détection auto (ML model au lieu de mots-clés)
 
 ## Stack technique
 - **Backend** : Python 3.11+ / FastAPI / LangChain

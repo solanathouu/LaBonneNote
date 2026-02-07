@@ -1,261 +1,732 @@
-// ===== CAHIER NUMÉRIQUE - Frontend Logic =====
+// ===== CAHIER NUMÉRIQUE - SPA avec Auto-Détection =====
 
-const API_URL = 'http://localhost:8000/api/chat';
+// ===== CONFIGURATION =====
 
-// App state
+const API_URL = 'http://localhost:8000';
+
+// État global de l'application
 const state = {
-    niveau: 'college',
-    matiere: '',
+    view: 'chat',  // 'chat' | 'library' | 'lesson'
+    selectedMatiere: null,
+    selectedLesson: null,
+    chatHistory: [],
+    lessonsCache: {},
     isLoading: false,
-    messageHistory: []
+    detectedNiveau: null,
+    detectedMatiere: null
 };
 
-// DOM elements
-const elements = {
-    niveauSelect: document.getElementById('niveau-select'),
-    matiereSelect: document.getElementById('matiere-select'),
-    messagesContainer: document.getElementById('messages-container'),
-    userInput: document.getElementById('user-input'),
-    sendButton: document.getElementById('send-button'),
-    indicator: document.getElementById('input-indicator'),
-    indicatorText: document.getElementById('indicator-text')
-};
+// ===== ROUTER SPA =====
 
-// Templates
-const templates = {
-    userMessage: document.getElementById('user-message-template'),
-    botMessage: document.getElementById('bot-message-template'),
-    loading: document.getElementById('loading-template')
-};
+/**
+ * Navigue vers une vue avec des paramètres optionnels
+ */
+function navigateTo(view, params = {}) {
+    console.log(`📍 Navigation: ${view}`, params);
 
-// ===== INITIALIZATION =====
+    state.view = view;
+    Object.assign(state, params);
 
-function init() {
-    console.log('📖 Cahier Numérique - Initializing...');
+    // Mettre à jour l'historique navigateur
+    const url = buildURL(view, params);
+    history.pushState({ view, params }, '', url);
 
-    // Event listeners
-    elements.niveauSelect.addEventListener('change', handleNiveauChange);
-    elements.matiereSelect.addEventListener('change', handleMatiereChange);
-    elements.sendButton.addEventListener('click', handleSendMessage);
-    elements.userInput.addEventListener('keydown', handleInputKeydown);
-    elements.userInput.addEventListener('input', autoResizeTextarea);
-
-    // Set initial theme
-    updateTheme();
-
-    // Focus input
-    elements.userInput.focus();
-
-    console.log('✅ Ready!');
+    renderView();
 }
 
-// ===== EVENT HANDLERS =====
-
-function handleNiveauChange(e) {
-    state.niveau = e.target.value;
-    updateIndicator();
+/**
+ * Construit l'URL pour l'historique
+ */
+function buildURL(view, params) {
+    if (view === 'chat') return '/';
+    if (view === 'library' && params.selectedMatiere) {
+        return `/#library/${params.selectedMatiere}`;
+    }
+    if (view === 'lesson' && params.selectedMatiere && params.selectedLesson) {
+        return `/#lesson/${params.selectedMatiere}/${encodeURIComponent(params.selectedLesson)}`;
+    }
+    return `/#${view}`;
 }
 
-function handleMatiereChange(e) {
-    state.matiere = e.target.value;
-    updateTheme();
-    updateIndicator();
-}
+/**
+ * Rend la vue actuelle
+ */
+function renderView() {
+    console.log(`🎨 Rendering view: ${state.view}`);
 
-function handleInputKeydown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSendMessage();
+    const mainContainer = document.getElementById('app-main');
+    const inputFooter = document.getElementById('input-footer');
+
+    // Clear containers
+    mainContainer.innerHTML = '';
+    inputFooter.innerHTML = '';
+
+    // Update nav toggle buttons
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === state.view);
+    });
+
+    // Render appropriate view
+    switch (state.view) {
+        case 'chat':
+            renderChatView(mainContainer, inputFooter);
+            break;
+        case 'library':
+            renderLibraryView(mainContainer);
+            break;
+        case 'lesson':
+            renderLessonView(mainContainer);
+            break;
     }
 }
 
+// ===== VUE CHAT (avec Auto-Détection) =====
+
+function renderChatView(mainContainer, inputFooter) {
+    // Messages container
+    const messagesDiv = document.createElement('div');
+    messagesDiv.className = 'messages-container';
+    messagesDiv.id = 'messages-container';
+
+    // Restore chat history or show welcome
+    if (state.chatHistory.length === 0) {
+        messagesDiv.innerHTML = `
+            <div class="message-wrapper bot-message welcome-msg">
+                <div class="message-avatar bot-avatar">
+                    <span>🤖</span>
+                </div>
+                <div class="message-bubble paper-bubble">
+                    <div class="message-content">
+                        <h3>Bienvenue dans ton cahier numérique ! 👋</h3>
+                        <p>Je suis là pour t'aider avec tes devoirs de collège.</p>
+                        <p><strong>Nouveau :</strong> Je détecte automatiquement ta matière et ton niveau ! Plus besoin de les sélectionner. 🎯</p>
+
+                        <div class="info-box">
+                            <span class="info-icon">💡</span>
+                            <p><strong>Astuce :</strong> Pose ta question directement ou clique sur une matière ci-dessus pour explorer les leçons !</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Restore messages
+        state.chatHistory.forEach(msg => {
+            if (msg.type === 'user') {
+                messagesDiv.appendChild(createUserMessage(msg.content));
+            } else if (msg.type === 'bot') {
+                messagesDiv.appendChild(createBotMessage(msg.content, msg.sources, msg.detection));
+            }
+        });
+    }
+
+    mainContainer.appendChild(messagesDiv);
+
+    // Input footer
+    inputFooter.innerHTML = `
+        <div class="input-wrapper paper-bubble">
+            ${state.detectedNiveau || state.detectedMatiere ? `
+                <div class="detection-badge">
+                    🤖 Détecté : ${state.detectedNiveau || ''} ${state.detectedMatiere ? '• ' + formatMatiere(state.detectedMatiere) : ''}
+                </div>
+            ` : ''}
+            <div class="input-indicator" id="input-indicator">
+                <span class="indicator-dot"></span>
+                <span id="indicator-text">Prêt à répondre</span>
+            </div>
+            <div class="input-area">
+                <textarea
+                    id="user-input"
+                    class="message-input"
+                    placeholder="Pose ta question ici... (ex: C'est quoi le théorème de Pythagore ?)"
+                    rows="1"
+                ></textarea>
+                <button id="send-button" class="send-btn">
+                    <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                    <span class="btn-glow"></span>
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Attach event listeners
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+
+    sendButton.addEventListener('click', handleSendMessage);
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    });
+    userInput.addEventListener('input', autoResizeTextarea);
+
+    // Focus input
+    userInput.focus();
+    scrollToBottom();
+}
+
 async function handleSendMessage() {
-    const question = elements.userInput.value.trim();
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const indicatorText = document.getElementById('indicator-text');
+    const question = userInput.value.trim();
 
     if (!question || state.isLoading) return;
 
-    // Add user message
-    addUserMessage(question);
+    // Add user message to history
+    state.chatHistory.push({ type: 'user', content: question });
 
     // Clear input
-    elements.userInput.value = '';
+    userInput.value = '';
     autoResizeTextarea();
 
-    // Set loading state
-    setLoading(true);
-    const loadingElement = addLoadingMessage();
+    // Update UI
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer.appendChild(createUserMessage(question));
+
+    // Show loading
+    state.isLoading = true;
+    sendButton.disabled = true;
+    userInput.disabled = true;
+    indicatorText.textContent = 'Recherche en cours...';
+
+    const loadingEl = createLoadingMessage();
+    messagesContainer.appendChild(loadingEl);
+    scrollToBottom();
 
     try {
-        const response = await fetch(API_URL, {
+        // Call auto-detect API
+        const response = await fetch(`${API_URL}/api/chat/auto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                question,
-                niveau: state.niveau,
-                matiere: state.matiere || undefined
-            })
+            body: JSON.stringify({ question })
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
 
+        // Update detected info
+        state.detectedNiveau = data.niveau_detecte;
+        state.detectedMatiere = data.matiere_detectee;
+
         // Remove loading
-        loadingElement.remove();
+        loadingEl.remove();
 
-        // Add bot response
-        addBotMessage(data.answer, data.sources || []);
+        // Check if ambiguous
+        if (data.ambigue && data.matieres_possibles && data.matieres_possibles.length > 1) {
+            // Show choice buttons
+            const choiceEl = createMatiereChoiceMessage(data.matieres_possibles, question);
+            messagesContainer.appendChild(choiceEl);
+        } else {
+            // Add bot response
+            const botEl = createBotMessage(data.answer, data.sources, {
+                niveau: data.niveau_detecte,
+                matiere: data.matiere_detectee
+            });
+            messagesContainer.appendChild(botEl);
 
-        // Save to history
-        state.messageHistory.push({
-            question,
-            answer: data.answer,
-            sources: data.sources,
-            timestamp: new Date().toISOString()
-        });
+            // Save to history
+            state.chatHistory.push({
+                type: 'bot',
+                content: data.answer,
+                sources: data.sources,
+                detection: {
+                    niveau: data.niveau_detecte,
+                    matiere: data.matiere_detectee
+                }
+            });
+        }
+
+        scrollToBottom();
 
     } catch (error) {
         console.error('❌ Error:', error);
-        loadingElement.remove();
-        addBotMessage(
+        loadingEl.remove();
+        const errorEl = createBotMessage(
             "Désolé, une erreur s'est produite. 😕 Vérifie que le serveur est bien lancé et réessaie !",
             []
         );
+        messagesContainer.appendChild(errorEl);
     } finally {
-        setLoading(false);
-        elements.userInput.focus();
+        state.isLoading = false;
+        sendButton.disabled = false;
+        userInput.disabled = false;
+        indicatorText.textContent = 'Prêt à répondre';
+        userInput.focus();
     }
 }
 
-// ===== UI UPDATES =====
+// ===== VUE BIBLIOTHÈQUE (Liste des Leçons) =====
 
-function setLoading(loading) {
-    state.isLoading = loading;
-    elements.sendButton.disabled = loading;
-    elements.userInput.disabled = loading;
-    elements.indicatorText.textContent = loading ? 'Recherche en cours...' : 'Prêt à répondre';
-}
-
-function updateTheme() {
-    if (state.matiere) {
-        document.body.setAttribute('data-theme', state.matiere);
-    } else {
-        document.body.removeAttribute('data-theme');
+async function renderLibraryView(mainContainer) {
+    if (!state.selectedMatiere) {
+        // Show matiere selection screen
+        mainContainer.innerHTML = `
+            <div class="library-intro">
+                <h2>📚 Bibliothèque de Cours</h2>
+                <p>Sélectionne une matière ci-dessus pour voir toutes les leçons disponibles.</p>
+            </div>
+        `;
+        return;
     }
-}
 
-function updateIndicator() {
-    const niveau = elements.niveauSelect.options[elements.niveauSelect.selectedIndex].text;
-    const matiere = state.matiere ?
-        elements.matiereSelect.options[elements.matiereSelect.selectedIndex].text :
-        'Toutes matières';
+    // Show loading
+    mainContainer.innerHTML = `
+        <div class="library-container">
+            <div class="library-header">
+                <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
+                <p>Chargement des leçons...</p>
+            </div>
+            <div class="lessons-loading">
+                ${createSkeletonCard()}
+                ${createSkeletonCard()}
+                ${createSkeletonCard()}
+            </div>
+        </div>
+    `;
 
-    if (!state.isLoading) {
-        elements.indicatorText.textContent = `${niveau} • ${matiere}`;
-    }
-}
+    try {
+        // Fetch lessons from API
+        const response = await fetch(`${API_URL}/api/lecons/${state.selectedMatiere}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-function autoResizeTextarea() {
-    const textarea = elements.userInput;
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-}
+        const data = await response.json();
+        state.lessonsCache[state.selectedMatiere] = data.lecons;
 
-function scrollToBottom() {
-    elements.messagesContainer.scrollTo({
-        top: elements.messagesContainer.scrollHeight,
-        behavior: 'smooth'
-    });
-}
+        // Render lessons
+        mainContainer.innerHTML = `
+            <div class="library-container">
+                <div class="library-header">
+                    <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
+                    <p>${data.nb_lecons} leçons disponibles</p>
+                </div>
 
-// ===== MESSAGE CREATION =====
+                <div class="lessons-grid" id="lessons-grid">
+                    ${data.lecons.map((lesson, i) => createLessonCard(lesson, i)).join('')}
+                </div>
+            </div>
+        `;
 
-function addUserMessage(text) {
-    const clone = templates.userMessage.content.cloneNode(true);
-    const content = clone.querySelector('.message-content');
-    content.textContent = text;
+        // Attach click listeners
+        document.querySelectorAll('.lesson-card').forEach(card => {
+            card.querySelector('.btn-read')?.addEventListener('click', () => {
+                const titre = card.dataset.titre;
+                navigateTo('lesson', { selectedMatiere: state.selectedMatiere, selectedLesson: titre });
+            });
 
-    elements.messagesContainer.appendChild(clone);
-    scrollToBottom();
-}
-
-function addBotMessage(text, sources = []) {
-    const clone = templates.botMessage.content.cloneNode(true);
-    const content = clone.querySelector('.message-content');
-    const sourcesContainer = clone.querySelector('.message-sources');
-
-    // Format message content
-    content.innerHTML = formatMarkdown(text);
-
-    // Add sources if any
-    if (sources && sources.length > 0) {
-        const sourcesTitle = document.createElement('div');
-        sourcesTitle.style.cssText = 'font-weight: 700; margin-bottom: 0.5rem; font-size: 0.9rem; opacity: 0.9;';
-        sourcesTitle.textContent = `📚 Sources (${sources.length})`;
-        sourcesContainer.appendChild(sourcesTitle);
-
-        sources.forEach((source, index) => {
-            const sourceEl = createSourceElement(source, index);
-            sourcesContainer.appendChild(sourceEl);
+            card.querySelector('.btn-ask')?.addEventListener('click', () => {
+                const titre = card.dataset.titre;
+                navigateTo('chat');
+                setTimeout(() => {
+                    const input = document.getElementById('user-input');
+                    if (input) {
+                        input.value = `Explique-moi ${titre}`;
+                        input.focus();
+                    }
+                }, 100);
+            });
         });
+
+    } catch (error) {
+        console.error('❌ Error loading lessons:', error);
+        mainContainer.innerHTML = `
+            <div class="library-error">
+                <h2>❌ Erreur</h2>
+                <p>Impossible de charger les leçons. Vérifie que le serveur est lancé.</p>
+            </div>
+        `;
+    }
+}
+
+function createLessonCard(lesson, index) {
+    return `
+        <div class="lesson-card" data-titre="${lesson.titre}" style="animation-delay: ${index * 50}ms">
+            <div class="lesson-icon">${getSubjectIcon(lesson.matiere)}</div>
+            <div class="lesson-content">
+                <h3 class="lesson-title">${lesson.titre}</h3>
+                <p class="lesson-resume">${lesson.resume}</p>
+                <div class="lesson-meta">
+                    <span class="lesson-niveau">${lesson.niveau}</span>
+                    <span class="lesson-chunks">${lesson.nb_chunks} sections</span>
+                </div>
+            </div>
+            <div class="lesson-actions">
+                <button class="btn-read">📖 Lire</button>
+                <button class="btn-ask">💬 Poser une question</button>
+            </div>
+        </div>
+    `;
+}
+
+// ===== VUE DÉTAIL LEÇON =====
+
+async function renderLessonView(mainContainer) {
+    if (!state.selectedMatiere || !state.selectedLesson) {
+        navigateTo('library', { selectedMatiere: state.selectedMatiere });
+        return;
     }
 
-    elements.messagesContainer.appendChild(clone);
-    scrollToBottom();
+    // Show loading
+    mainContainer.innerHTML = `
+        <div class="lesson-detail-loading">
+            <div class="breadcrumbs">
+                <a href="#" data-nav="library">Bibliothèque</a> ›
+                <a href="#" data-nav="library-matiere">${formatMatiere(state.selectedMatiere)}</a> ›
+                <span>${state.selectedLesson}</span>
+            </div>
+            <h2>Chargement...</h2>
+            ${createSkeletonCard()}
+        </div>
+    `;
+
+    try {
+        const titre = encodeURIComponent(state.selectedLesson);
+        const url = `${API_URL}/api/lecons/${state.selectedMatiere}/detail?titre=${titre}`;
+
+        console.log('Fetching lesson:', url);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const lesson = await response.json();
+
+        mainContainer.innerHTML = `
+            <div class="lesson-detail">
+                <div class="breadcrumbs">
+                    <a href="#" data-nav="library">📚 Bibliothèque</a> ›
+                    <a href="#" data-nav="library-matiere">${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</a> ›
+                    <span>${lesson.titre}</span>
+                </div>
+
+                <div class="lesson-header">
+                    <h1>${getSubjectIcon(lesson.matiere)} ${lesson.titre}</h1>
+                    <div class="lesson-meta-large">
+                        <span class="meta-badge">${lesson.niveau}</span>
+                        <span class="meta-badge">${lesson.nb_chunks} sections</span>
+                        <span class="meta-badge">${lesson.source}</span>
+                    </div>
+                </div>
+
+                <div class="lesson-body">
+                    <div class="lesson-resume-section">
+                        <h3>📝 Résumé</h3>
+                        <p>${lesson.resume}</p>
+                        <button id="btn-show-full" class="btn-expand">📖 Lire le contenu complet</button>
+                    </div>
+
+                    <div id="lesson-full-content" class="lesson-full-content hidden">
+                        <h3>📚 Contenu Complet</h3>
+                        <div class="lesson-text">${formatLessonContent(lesson.contenu_complet)}</div>
+                    </div>
+                </div>
+
+                <div class="lesson-actions-bottom">
+                    <button id="btn-ask-about" class="btn-primary">
+                        💬 Poser une question sur cette leçon
+                    </button>
+                    ${lesson.url ? `<a href="${lesson.url}" target="_blank" class="btn-secondary">🔗 Voir sur Vikidia</a>` : ''}
+                </div>
+            </div>
+        `;
+
+        // Attach event listeners
+        document.querySelectorAll('.breadcrumbs a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (link.dataset.nav === 'library') {
+                    navigateTo('library', { selectedMatiere: null });
+                } else if (link.dataset.nav === 'library-matiere') {
+                    navigateTo('library', { selectedMatiere: state.selectedMatiere });
+                }
+            });
+        });
+
+        document.getElementById('btn-show-full')?.addEventListener('click', () => {
+            document.getElementById('lesson-full-content').classList.remove('hidden');
+            document.getElementById('btn-show-full').style.display = 'none';
+        });
+
+        document.getElementById('btn-ask-about')?.addEventListener('click', () => {
+            navigateTo('chat');
+            setTimeout(() => {
+                const input = document.getElementById('user-input');
+                if (input) {
+                    input.value = `Explique-moi ${lesson.titre}`;
+                    input.focus();
+                }
+            }, 100);
+        });
+
+    } catch (error) {
+        console.error('❌ Error loading lesson:', error);
+        mainContainer.innerHTML = `
+            <div class="lesson-error">
+                <h2>❌ Erreur</h2>
+                <p>Impossible de charger cette leçon.</p>
+                <button onclick="navigateTo('library', {selectedMatiere: '${state.selectedMatiere}'})">
+                    ← Retour à la bibliothèque
+                </button>
+            </div>
+        `;
+    }
 }
 
-function addLoadingMessage() {
-    const clone = templates.loading.content.cloneNode(true);
-    elements.messagesContainer.appendChild(clone);
-    scrollToBottom();
-    return elements.messagesContainer.lastElementChild;
+// ===== HELPERS - MESSAGE CREATION =====
+
+function createUserMessage(text) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper user-message';
+    wrapper.innerHTML = `
+        <div class="message-bubble paper-bubble user-bubble">
+            <div class="message-content">${escapeHtml(text)}</div>
+        </div>
+        <div class="message-avatar user-avatar">
+            <span>✏️</span>
+        </div>
+    `;
+    return wrapper;
 }
 
-// ===== FORMATTING =====
+function createBotMessage(text, sources = [], detection = null) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper bot-message';
+
+    // Créer la section sources avec les liens Vikidia et Bibliothèque
+    let sourcesHTML = '';
+    if (sources && sources.length > 0) {
+        sourcesHTML = `
+            <div class="message-sources">
+                <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.9rem; opacity: 0.9;">
+                    📚 Sources (${sources.length})
+                </div>
+                ${sources.map((s, i) => `
+                    <div class="source-item" style="animation-delay: ${i * 80}ms">
+                        <span style="font-size: 1.2rem;">${getSubjectIcon(s.matiere)}</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; margin-bottom: 0.25rem;">${s.titre}</div>
+                            <div style="opacity: 0.8; font-size: 0.85rem;">${formatMatiere(s.matiere)}</div>
+                        </div>
+                        <div class="source-links">
+                            ${s.url ? `<a href="${s.url}" target="_blank" class="source-link-btn vikidia-btn" title="Voir sur Vikidia">🔗 Vikidia</a>` : ''}
+                            <button class="source-link-btn library-btn" data-matiere="${s.matiere}" data-titre="${s.titre}" title="Voir dans la bibliothèque">📚 Bibliothèque</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // Construire le badge de détection seulement si les valeurs sont valides
+    let detectionBadge = '';
+    if (detection && (detection.niveau || detection.matiere)) {
+        const niveauText = detection.niveau || '';
+        const matiereText = detection.matiere ? formatMatiere(detection.matiere) : '';
+        const separator = niveauText && matiereText ? ' • ' : '';
+        detectionBadge = `<div class="detection-info">🤖 Détecté : ${niveauText}${separator}${matiereText}</div>`;
+    }
+
+    wrapper.innerHTML = `
+        <div class="message-avatar bot-avatar">
+            <span>📚</span>
+        </div>
+        <div class="message-bubble paper-bubble bot-bubble">
+            ${detectionBadge}
+            <div class="message-content">${formatMarkdown(text)}</div>
+            ${sourcesHTML}
+        </div>
+    `;
+
+    // Attacher les event listeners pour les boutons bibliothèque
+    setTimeout(() => {
+        wrapper.querySelectorAll('.library-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const matiere = btn.dataset.matiere;
+                const titre = btn.dataset.titre;
+
+                console.log('📚 Navigation vers leçon:', titre, 'dans', matiere);
+                navigateTo('lesson', {
+                    selectedMatiere: matiere,
+                    selectedLesson: titre
+                });
+            });
+        });
+    }, 0);
+
+    return wrapper;
+}
+
+function createLoadingMessage() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper bot-message loading-wrapper';
+    wrapper.innerHTML = `
+        <div class="message-avatar bot-avatar">
+            <span>📚</span>
+        </div>
+        <div class="message-bubble paper-bubble">
+            <div class="loading-skeleton">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line"></div>
+            </div>
+            <div class="loading-text">
+                <span class="thinking-dots">
+                    <span>.</span><span>.</span><span>.</span>
+                </span>
+                <span>Je cherche dans mes cours</span>
+            </div>
+        </div>
+    `;
+    return wrapper;
+}
+
+function createMatiereChoiceMessage(matieres, question) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper bot-message';
+    wrapper.innerHTML = `
+        <div class="message-avatar bot-avatar">
+            <span>🤔</span>
+        </div>
+        <div class="message-bubble paper-bubble bot-bubble">
+            <div class="message-content">
+                <p><strong>Hmm, ta question pourrait concerner plusieurs matières :</strong></p>
+                <div class="matiere-choice-buttons">
+                    ${matieres.map(m => `
+                        <button class="matiere-choice-btn" data-matiere="${m}" data-question="${escapeHtml(question)}">
+                            ${getSubjectIcon(m)} ${formatMatiere(m)}
+                        </button>
+                    `).join('')}
+                </div>
+                <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                    <em>Clique sur la matière qui correspond le mieux à ta question.</em>
+                </p>
+            </div>
+        </div>
+    `;
+
+    // Attach click handlers
+    wrapper.querySelectorAll('.matiere-choice-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const matiere = btn.dataset.matiere;
+            const question = btn.dataset.question;
+
+            // Disable buttons
+            wrapper.querySelectorAll('.matiere-choice-btn').forEach(b => b.disabled = true);
+
+            // Re-send question with selected matiere
+            await sendQuestionWithMatiere(question, matiere);
+        });
+    });
+
+    return wrapper;
+}
+
+async function sendQuestionWithMatiere(question, matiere) {
+    const messagesContainer = document.getElementById('messages-container');
+    const loadingEl = createLoadingMessage();
+    messagesContainer.appendChild(loadingEl);
+    scrollToBottom();
+
+    try {
+        const response = await fetch(`${API_URL}/api/chat/auto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, matiere })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        loadingEl.remove();
+
+        const botEl = createBotMessage(data.answer, data.sources, {
+            niveau: data.niveau_detecte,
+            matiere: data.matiere_detectee
+        });
+        messagesContainer.appendChild(botEl);
+
+        state.chatHistory.push({
+            type: 'bot',
+            content: data.answer,
+            sources: data.sources,
+            detection: {
+                niveau: data.niveau_detecte,
+                matiere: data.matiere_detectee
+            }
+        });
+
+        scrollToBottom();
+    } catch (error) {
+        console.error('❌ Error:', error);
+        loadingEl.remove();
+    }
+}
+
+function createSkeletonCard() {
+    return `
+        <div class="skeleton-card">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line"></div>
+        </div>
+    `;
+}
+
+// ===== HELPERS - FORMATTING =====
 
 function formatMarkdown(text) {
-    // Simple markdown-like formatting
     let formatted = text;
 
-    // Bold: **text**
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Convertir les titres Markdown en gras souligné (#### -> <strong><u>)
+    formatted = formatted.replace(/^####\s+(.+)$/gm, '<strong><u>$1</u></strong>');
+    formatted = formatted.replace(/^###\s+(.+)$/gm, '<strong><u>$1</u></strong>');
+    formatted = formatted.replace(/^##\s+(.+)$/gm, '<strong><u>$1</u></strong>');
+    formatted = formatted.replace(/^#\s+(.+)$/gm, '<strong><u>$1</u></strong>');
 
-    // Italic: *text*
+    // Gras et italique
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
 
-    // Code: `code`
+    // Code inline
     formatted = formatted.replace(/`(.+?)`/g, '<code style="background: rgba(255,255,255,0.2); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace;">$1</code>');
 
-    // Line breaks
+    // Retours à la ligne
     formatted = formatted.replace(/\n/g, '<br>');
 
     return formatted;
 }
 
-function createSourceElement(source, index) {
-    const sourceEl = document.createElement('div');
-    sourceEl.className = 'source-item';
-    sourceEl.style.animationDelay = `${index * 80}ms`;
-
-    const icon = getSubjectIcon(source.matiere);
-    const title = source.titre || 'Source';
-    const matiereText = formatMatiere(source.matiere);
-
-    sourceEl.innerHTML = `
-        <span style="font-size: 1.2rem;">${icon}</span>
-        <span style="flex: 1; font-weight: 600;">${title}</span>
-        <span style="opacity: 0.8; font-size: 0.85rem;">${matiereText}</span>
-    `;
-
-    if (source.url) {
-        sourceEl.style.cursor = 'pointer';
-        sourceEl.addEventListener('click', () => window.open(source.url, '_blank'));
-    }
-
-    return sourceEl;
+function formatLessonContent(text) {
+    // Split into paragraphs and format
+    return text.split('\n\n')
+        .map(p => `<p>${formatMarkdown(p)}</p>`)
+        .join('');
 }
 
-// ===== HELPERS =====
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatMatiere(matiere) {
+    const names = {
+        'mathematiques': 'Mathématiques',
+        'francais': 'Français',
+        'histoire_geo': 'Histoire-Géo',
+        'svt': 'SVT',
+        'physique_chimie': 'Physique-Chimie',
+        'technologie': 'Technologie',
+        'anglais': 'Anglais',
+        'espagnol': 'Espagnol'
+    };
+    return names[matiere] || matiere;
+}
 
 function getSubjectIcon(matiere) {
     const icons = {
@@ -271,26 +742,94 @@ function getSubjectIcon(matiere) {
     return icons[matiere] || '📖';
 }
 
-function formatMatiere(matiere) {
-    const names = {
-        'mathematiques': 'Maths',
-        'francais': 'Français',
-        'histoire_geo': 'Histoire-Géo',
-        'svt': 'SVT',
-        'physique_chimie': 'Physique-Chimie',
-        'technologie': 'Techno',
-        'anglais': 'Anglais',
-        'espagnol': 'Espagnol'
-    };
-    return names[matiere] || matiere;
+function autoResizeTextarea() {
+    const textarea = document.getElementById('user-input');
+    if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
 }
 
-// ===== START =====
+function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    if (container) {
+        setTimeout(() => {
+            container.scrollTo({
+                top: container.scrollHeight,
+                behavior: 'smooth'
+            });
+        }, 100);
+    }
+}
 
+// ===== EVENT LISTENERS GLOBAUX =====
+
+function attachGlobalListeners() {
+    // Toggle buttons (Chat / Bibliothèque)
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+            navigateTo(view, view === 'library' ? { selectedMatiere: state.selectedMatiere } : {});
+        });
+    });
+
+    // Subject buttons
+    document.querySelectorAll('.subject-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const matiere = btn.dataset.matiere;
+
+            // Update active state
+            document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update theme
+            document.body.setAttribute('data-theme', matiere);
+
+            // Navigate to library with selected matiere
+            navigateTo('library', { selectedMatiere: matiere });
+        });
+    });
+
+    // Browser back/forward
+    window.addEventListener('popstate', (e) => {
+        if (e.state) {
+            state.view = e.state.view;
+            Object.assign(state, e.state.params);
+            renderView();
+        }
+    });
+}
+
+// ===== INITIALIZATION =====
+
+function init() {
+    console.log('📖 Cahier Numérique SPA - Initializing...');
+
+    attachGlobalListeners();
+
+    // Parse initial URL
+    const hash = window.location.hash;
+    if (hash.startsWith('#library/')) {
+        const matiere = hash.split('/')[1];
+        navigateTo('library', { selectedMatiere: matiere });
+    } else if (hash.startsWith('#lesson/')) {
+        const parts = hash.split('/');
+        navigateTo('lesson', {
+            selectedMatiere: parts[1],
+            selectedLesson: decodeURIComponent(parts[2])
+        });
+    } else {
+        renderView();  // Default: chat view
+    }
+
+    console.log('✅ Ready!');
+}
+
+// Start when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
 }
 
-console.log('📚 Cahier Numérique - Frontend loaded');
+console.log('📚 Cahier Numérique SPA - Frontend loaded');

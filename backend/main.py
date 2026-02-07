@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 from rag import RAGChain
+from detection import auto_detect
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -157,14 +158,118 @@ async def get_niveaux():
     }
 
 
-# Servir le frontend (fichiers statiques)
-# Note: décommenter quand le frontend sera créé
-# app.mount("/static", StaticFiles(directory="frontend"), name="static")
+@app.post("/api/chat/auto", response_model=ChatResponse)
+async def chat_auto(request: ChatRequest):
+    """Endpoint chat avec auto-détection du niveau et de la matière.
 
-# @app.get("/")
-# async def serve_frontend():
-#     """Sert la page d'accueil du frontend."""
-#     return FileResponse("frontend/index.html")
+    Args:
+        request: Requête avec question (niveau/matiere sont optionnels et overridés si détectés).
+
+    Returns:
+        Réponse avec answer, sources, + niveau_detecte, matiere_detectee, matieres_possibles si ambiguïté.
+    """
+    if rag_chain is None:
+        raise HTTPException(status_code=503, detail="RAG Chain non initialisée")
+
+    try:
+        question = request.question
+        logger.info(f"Question reçue (auto-detect): '{question}'")
+
+        # Auto-détection
+        detection = auto_detect(question)
+        niveau_final = request.niveau or detection["niveau_detecte"]
+        matiere_finale = request.matiere or detection["matiere_detectee"]
+
+        logger.info(f"Auto-détection: niveau={detection['niveau_detecte']}, "
+                   f"matiere={detection['matiere_detectee']}, "
+                   f"ambigue={detection['ambigue']}")
+
+        # Exécuter la chaîne RAG
+        result = rag_chain.run(
+            question=question,
+            matiere=matiere_finale,
+            niveau=niveau_final
+        )
+
+        # Ajouter les infos de détection à la réponse
+        result["niveau_detecte"] = detection["niveau_detecte"]
+        result["matiere_detectee"] = detection["matiere_detectee"]
+        result["matieres_possibles"] = detection["matieres_possibles"]
+        result["ambigue"] = detection["ambigue"]
+
+        logger.info(f"Réponse générée avec {result['nb_sources']} sources")
+        return result
+
+    except Exception as e:
+        logger.error(f"Erreur lors du traitement (auto): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@app.get("/api/lecons/{matiere}")
+async def get_lecons(matiere: str, niveau: Optional[str] = None, limit: int = 100):
+    """Retourne la liste des leçons disponibles pour une matière.
+
+    Args:
+        matiere: ID de la matière (mathematiques, francais, etc.).
+        niveau: Niveau optionnel pour filtrer (6eme, 5eme, 4eme, 3eme).
+        limit: Nombre maximum de leçons (défaut: 100).
+
+    Returns:
+        Liste de leçons avec titre, resume, url, niveau, nb_chunks.
+    """
+    if rag_chain is None:
+        raise HTTPException(status_code=503, detail="RAG Chain non initialisée")
+
+    try:
+        logger.info(f"Récupération leçons: matiere={matiere}, niveau={niveau}")
+        lessons = rag_chain.get_all_lessons(matiere, niveau, limit)
+
+        return {
+            "matiere": matiere,
+            "niveau": niveau or "college",
+            "nb_lecons": len(lessons),
+            "lecons": lessons
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des leçons: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@app.get("/api/lecons/{matiere}/detail")
+async def get_lecon_content(matiere: str, titre: str):
+    """Retourne le contenu complet d'une leçon spécifique.
+
+    Args:
+        matiere: ID de la matière.
+        titre: Titre exact de la leçon (query parameter).
+
+    Returns:
+        Contenu complet de la leçon avec metadata.
+    """
+    if rag_chain is None:
+        raise HTTPException(status_code=503, detail="RAG Chain non initialisée")
+
+    try:
+        logger.info(f"Récupération contenu leçon: {titre} (matiere={matiere})")
+        lesson = rag_chain.get_lesson_content(matiere, titre)
+
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Leçon non trouvée")
+
+        return lesson
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération du contenu: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+# Servir le frontend (fichiers statiques)
+from pathlib import Path
+frontend_dir = Path(__file__).parent.parent / "frontend"
+app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
 
 
 if __name__ == "__main__":
