@@ -20,7 +20,9 @@ const state = {
     searchQuery: '',
     searchResults: null,
     // Favoris (stockés dans localStorage)
-    favorites: []
+    favorites: [],
+    // Animation uniquement au chargement initial
+    isInitialLibraryLoad: true
 };
 
 // ===== FAVORIS =====
@@ -364,6 +366,7 @@ async function renderLibraryView(mainContainer) {
         // Reset displayed count and search when changing subject
         state.displayedLessonsCount = 50;
         state.searchQuery = '';
+        state.isInitialLibraryLoad = true; // Activer animations pour nouveau chargement
 
         // Render lessons with pagination
         renderLessonsWithPagination(mainContainer, lessons);
@@ -431,7 +434,7 @@ function renderLessonsWithPagination(mainContainer, allLessons) {
             ${noResultsMessage}
 
             <div class="lessons-grid" id="lessons-grid">
-                ${lessonsToShow.map((lesson, i) => createLessonCard(lesson, i)).join('')}
+                ${lessonsToShow.map((lesson, i) => createLessonCard(lesson, i, state.isInitialLibraryLoad)).join('')}
             </div>
 
             ${hasMore ? `
@@ -448,9 +451,20 @@ function renderLessonsWithPagination(mainContainer, allLessons) {
     const searchInput = document.getElementById('library-search-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
+            const cursorPosition = e.target.selectionStart; // Sauvegarder position curseur
             state.searchQuery = e.target.value;
             state.displayedLessonsCount = 50; // Reset pagination on search
+            state.isInitialLibraryLoad = false; // Désactiver animations lors de la recherche
             renderLessonsWithPagination(mainContainer, allLessons);
+
+            // Restaurer le focus et la position du curseur après le re-render
+            setTimeout(() => {
+                const newSearchInput = document.getElementById('library-search-input');
+                if (newSearchInput) {
+                    newSearchInput.focus();
+                    newSearchInput.setSelectionRange(cursorPosition, cursorPosition);
+                }
+            }, 0);
         });
 
         // Focus only if no search active (avoid refocus on typing)
@@ -539,21 +553,18 @@ function attachLessonCardListeners() {
     });
 }
 
-function createLessonCard(lesson, index) {
+function createLessonCard(lesson, index, animate = false) {
     // Nettoyer le résumé des crochets et le tronquer si trop long
     let cleanResume = lesson.resume.replace(/^\[.+?\]\s*/gm, '').replace(/\n\[.+?\]\s*/g, '\n');
     if (cleanResume.length > 150) {
         cleanResume = cleanResume.substring(0, 150) + '...';
     }
 
-    // Animation delay réduit pour les grandes listes (max 1.5s)
-    const animationDelay = Math.min(index * 30, 1500);
-
     // Check if lesson is favorite
     const isFav = isFavorite(lesson.matiere, lesson.titre);
 
     return `
-        <div class="lesson-card ${isFav ? 'is-favorite' : ''}" data-titre="${lesson.titre}" data-matiere="${lesson.matiere}" style="animation-delay: ${animationDelay}ms">
+        <div class="lesson-card ${isFav ? 'is-favorite' : ''}" data-titre="${lesson.titre}" data-matiere="${lesson.matiere}">
             <button class="btn-favorite ${isFav ? 'active' : ''}" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">
                 ${isFav ? '⭐' : '☆'}
             </button>
@@ -753,7 +764,7 @@ function createBotMessage(text, sources = [], detection = null) {
                     📚 Sources (${sources.length})
                 </div>
                 ${sources.map((s, i) => `
-                    <div class="source-item" style="animation-delay: ${i * 80}ms">
+                    <div class="source-item">
                         <span style="font-size: 1.2rem;">${getSubjectIcon(s.matiere)}</span>
                         <div style="flex: 1;">
                             <div style="font-weight: 600; margin-bottom: 0.25rem;">${s.titre}</div>

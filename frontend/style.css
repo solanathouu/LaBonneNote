@@ -314,7 +314,6 @@ body {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     padding: var(--space-md) var(--space-lg);
-    animation: fadeInDown 600ms var(--transition-bounce);
 }
 
 @keyframes fadeInDown {
@@ -496,7 +495,6 @@ body {
     display: flex;
     gap: var(--space-md);
     align-items: flex-start;
-    animation: messageSlideIn 400ms var(--transition-bounce);
 }
 
 @keyframes messageSlideIn {
@@ -792,7 +790,6 @@ body {
         var(--paper-cream) 100%
     );
     border-radius: var(--radius-sm);
-    animation: skeletonPulse 1.5s ease-in-out infinite;
 }
 
 .skeleton-line.short {
@@ -814,7 +811,7 @@ body {
 }
 
 .thinking-dots span {
-    animation: dotBounce 1.4s infinite;
+    /* No animation */
 }
 
 .thinking-dots span:nth-child(1) { animation-delay: 0s; }
@@ -834,7 +831,6 @@ body {
 
 .input-wrapper {
     padding: var(--space-md) var(--space-lg);
-    animation: fadeInUp 600ms var(--transition-bounce);
 }
 
 @keyframes fadeInUp {
@@ -863,7 +859,6 @@ body {
     height: 8px;
     background: var(--accent-color);
     border-radius: 50%;
-    animation: dotPulse 2s ease-in-out infinite;
 }
 
 @keyframes dotPulse {
@@ -1098,7 +1093,6 @@ body {
     background: var(--paper-white);
     border-bottom: 1px solid var(--border-light);
     box-shadow: var(--shadow-sm);
-    animation: slideDown 0.4s ease;
 }
 
 .nav-inner {
@@ -1216,7 +1210,6 @@ body {
     margin: var(--space-2xl) auto;
     padding: var(--space-2xl);
     text-align: center;
-    animation: fadeInUp 0.5s ease;
 }
 
 .library-intro h2,
@@ -1230,7 +1223,6 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     padding: var(--space-xl) var(--space-lg);
-    animation: fadeInUp 0.5s ease;
 }
 
 .library-header {
@@ -1267,7 +1259,6 @@ body {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    animation: fadeInUp 0.5s ease both;
     cursor: pointer;
     user-select: none;
 }
@@ -1317,7 +1308,6 @@ body {
 .btn-favorite.active {
     background: var(--accent-light);
     border-color: var(--accent-color);
-    animation: starPulse 0.5s ease;
 }
 
 @keyframes starPulse {
@@ -1413,7 +1403,6 @@ body {
 /* Library Search */
 .library-search {
     margin: var(--space-lg) 0;
-    animation: fadeInUp 0.4s ease;
 }
 
 .search-input-wrapper {
@@ -1496,14 +1485,12 @@ body {
     min-height: 400px;
     padding: var(--space-2xl);
     text-align: center;
-    animation: fadeInUp 0.5s ease;
 }
 
 .empty-icon {
     font-size: 5rem;
     margin-bottom: var(--space-lg);
     opacity: 0.5;
-    animation: bounce 2s ease-in-out infinite;
 }
 
 @keyframes bounce {
@@ -1565,7 +1552,6 @@ body {
     max-width: 900px;
     margin: 0 auto;
     padding: var(--space-xl) var(--space-lg);
-    animation: fadeInUp 0.5s ease;
 }
 
 .breadcrumbs {
@@ -1735,7 +1721,6 @@ body {
     border-radius: var(--radius-md);
     border: 1px solid var(--accent-medium);
     margin-bottom: var(--space-sm);
-    animation: fadeInDown 0.3s ease;
 }
 
 .detection-info {
@@ -1786,7 +1771,7 @@ body {
 
 .skeleton-card,
 .lessons-loading {
-    animation: fadeIn 0.3s ease;
+    /* No animation */
 }
 
 .skeleton-card {
@@ -1808,7 +1793,6 @@ body {
     background-size: 200% 100%;
     border-radius: 4px;
     margin-bottom: var(--space-sm);
-    animation: shimmer 1.5s infinite;
 }
 
 .skeleton-line.short {
