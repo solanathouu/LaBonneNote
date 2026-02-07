@@ -6,15 +6,67 @@ const API_URL = 'http://localhost:8000';
 
 // État global de l'application
 const state = {
-    view: 'chat',  // 'chat' | 'library' | 'lesson'
+    view: 'chat',  // 'chat' | 'library' | 'lesson' | 'favorites'
     selectedMatiere: null,
     selectedLesson: null,
     chatHistory: [],
     lessonsCache: {},
     isLoading: false,
     detectedNiveau: null,
-    detectedMatiere: null
+    detectedMatiere: null,
+    // Pagination pour la bibliothèque
+    displayedLessonsCount: 50,
+    // Recherche bibliothèque
+    searchQuery: '',
+    searchResults: null,
+    // Favoris (stockés dans localStorage)
+    favorites: []
 };
+
+// ===== FAVORIS =====
+
+function loadFavorites() {
+    const saved = localStorage.getItem('favorites');
+    if (saved) {
+        try {
+            state.favorites = JSON.parse(saved);
+        } catch (e) {
+            state.favorites = [];
+        }
+    }
+}
+
+function saveFavorites() {
+    localStorage.setItem('favorites', JSON.stringify(state.favorites));
+}
+
+function isFavorite(matiere, titre) {
+    return state.favorites.some(fav => fav.matiere === matiere && fav.titre === titre);
+}
+
+function toggleFavorite(lesson) {
+    const index = state.favorites.findIndex(fav =>
+        fav.matiere === lesson.matiere && fav.titre === lesson.titre
+    );
+
+    if (index >= 0) {
+        // Remove from favorites
+        state.favorites.splice(index, 1);
+    } else {
+        // Add to favorites
+        state.favorites.push({
+            titre: lesson.titre,
+            matiere: lesson.matiere,
+            resume: lesson.resume,
+            niveau: lesson.niveau,
+            url: lesson.url,
+            nb_chunks: lesson.nb_chunks,
+            addedAt: Date.now()
+        });
+    }
+
+    saveFavorites();
+}
 
 // ===== ROUTER SPA =====
 
@@ -72,6 +124,9 @@ function renderView() {
             break;
         case 'library':
             renderLibraryView(mainContainer);
+            break;
+        case 'favorites':
+            renderFavoritesView(mainContainer);
             break;
         case 'lesson':
             renderLessonView(mainContainer);
@@ -306,52 +361,15 @@ async function renderLibraryView(mainContainer) {
             state.lessonsCache[state.selectedMatiere] = lessons;
         }
 
-        // Render lessons
-        mainContainer.innerHTML = `
-            <div class="library-container">
-                <div class="library-header">
-                    <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
-                    <p>${lessons.length} leçons disponibles</p>
-                </div>
+        // Reset displayed count and search when changing subject
+        state.displayedLessonsCount = 50;
+        state.searchQuery = '';
 
-                <div class="lessons-grid" id="lessons-grid">
-                    ${lessons.map((lesson, i) => createLessonCard(lesson, i)).join('')}
-                </div>
-            </div>
-        `;
+        // Render lessons with pagination
+        renderLessonsWithPagination(mainContainer, lessons);
 
         // Marquer le container avec la matière actuellement affichée
         mainContainer.dataset.currentMatiere = state.selectedMatiere;
-
-        // Attach click listeners
-        document.querySelectorAll('.lesson-card').forEach(card => {
-            // Click sur toute la carte = ouvrir la leçon
-            card.addEventListener('click', () => {
-                const titre = card.dataset.titre;
-                navigateTo('lesson', { selectedMatiere: state.selectedMatiere, selectedLesson: titre });
-            });
-
-            // Bouton "Lire" garde le même comportement (déjà géré par le click sur la carte)
-            card.querySelector('.btn-read')?.addEventListener('click', (e) => {
-                e.stopPropagation(); // Éviter double navigation
-                const titre = card.dataset.titre;
-                navigateTo('lesson', { selectedMatiere: state.selectedMatiere, selectedLesson: titre });
-            });
-
-            // Bouton "Poser une question" a un comportement différent
-            card.querySelector('.btn-ask')?.addEventListener('click', (e) => {
-                e.stopPropagation(); // Empêcher le click sur la carte
-                const titre = card.dataset.titre;
-                navigateTo('chat');
-                setTimeout(() => {
-                    const input = document.getElementById('user-input');
-                    if (input) {
-                        input.value = `Explique-moi ${titre}`;
-                        input.focus();
-                    }
-                }, 100);
-            });
-        });
 
     } catch (error) {
         console.error('❌ Error loading lessons:', error);
@@ -364,6 +382,163 @@ async function renderLibraryView(mainContainer) {
     }
 }
 
+function renderLessonsWithPagination(mainContainer, allLessons) {
+    // Filtrer les leçons si une recherche est active
+    let filteredLessons = allLessons;
+    if (state.searchQuery) {
+        const query = normalizeString(state.searchQuery);
+        filteredLessons = allLessons.filter(lesson => {
+            const titre = normalizeString(lesson.titre);
+            const resume = normalizeString(lesson.resume);
+            return titre.includes(query) || resume.includes(query);
+        });
+    }
+
+    const lessonsToShow = filteredLessons.slice(0, state.displayedLessonsCount);
+    const hasMore = state.displayedLessonsCount < filteredLessons.length;
+
+    // Message si aucun résultat
+    const noResultsMessage = state.searchQuery && filteredLessons.length === 0 ? `
+        <div class="no-results">
+            <p>😕 Aucune leçon trouvée pour "<strong>${state.searchQuery}</strong>"</p>
+            <p style="font-size: 0.9rem; margin-top: 0.5rem;">Essaie avec d'autres mots-clés.</p>
+        </div>
+    ` : '';
+
+    mainContainer.innerHTML = `
+        <div class="library-container">
+            <div class="library-header">
+                <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
+                <p>${allLessons.length} leçons disponibles${state.searchQuery ? ` • ${filteredLessons.length} résultat(s)` : ` • Affichage de ${lessonsToShow.length} leçons`}</p>
+            </div>
+
+            <div class="library-search">
+                <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input
+                        type="text"
+                        id="library-search-input"
+                        class="search-input"
+                        placeholder="Rechercher une leçon par titre ou mot-clé..."
+                        value="${state.searchQuery}"
+                    />
+                    ${state.searchQuery ? `
+                        <button id="clear-search-btn" class="clear-search-btn" title="Effacer la recherche">✕</button>
+                    ` : ''}
+                </div>
+            </div>
+
+            ${noResultsMessage}
+
+            <div class="lessons-grid" id="lessons-grid">
+                ${lessonsToShow.map((lesson, i) => createLessonCard(lesson, i)).join('')}
+            </div>
+
+            ${hasMore ? `
+                <div class="load-more-container">
+                    <button id="load-more-btn" class="btn-load-more">
+                        📚 Charger 50 leçons de plus (${filteredLessons.length - state.displayedLessonsCount} restantes)
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    // Attach search input listener
+    const searchInput = document.getElementById('library-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.searchQuery = e.target.value;
+            state.displayedLessonsCount = 50; // Reset pagination on search
+            renderLessonsWithPagination(mainContainer, allLessons);
+        });
+
+        // Focus only if no search active (avoid refocus on typing)
+        if (!state.searchQuery) {
+            setTimeout(() => searchInput.focus(), 100);
+        }
+    }
+
+    // Attach clear search button
+    document.getElementById('clear-search-btn')?.addEventListener('click', () => {
+        state.searchQuery = '';
+        state.displayedLessonsCount = 50;
+        renderLessonsWithPagination(mainContainer, allLessons);
+    });
+
+    // Attach click listeners to lesson cards
+    attachLessonCardListeners();
+
+    // Attach load more button
+    if (hasMore) {
+        document.getElementById('load-more-btn')?.addEventListener('click', () => {
+            state.displayedLessonsCount += 50;
+            renderLessonsWithPagination(mainContainer, allLessons);
+        });
+    }
+}
+
+function attachLessonCardListeners() {
+    document.querySelectorAll('.lesson-card').forEach(card => {
+        const titre = card.dataset.titre;
+        const matiere = card.dataset.matiere || state.selectedMatiere;
+
+        // Click sur toute la carte = ouvrir la leçon
+        card.addEventListener('click', () => {
+            navigateTo('lesson', { selectedMatiere: matiere, selectedLesson: titre });
+        });
+
+        // Bouton favori
+        card.querySelector('.btn-favorite')?.addEventListener('click', (e) => {
+            e.stopPropagation(); // Ne pas ouvrir la leçon
+
+            // Trouver la leçon complète pour toggle
+            const lesson = {
+                titre: titre,
+                matiere: matiere,
+                resume: card.querySelector('.lesson-resume')?.textContent || '',
+                niveau: card.querySelector('.lesson-niveau')?.textContent || 'college',
+                nb_chunks: parseInt(card.querySelector('.lesson-chunks')?.textContent) || 0,
+                url: ''
+            };
+
+            toggleFavorite(lesson);
+
+            // Re-render la vue actuelle pour mettre à jour l'étoile
+            if (state.view === 'favorites') {
+                renderFavoritesView(document.getElementById('app-main'));
+            } else {
+                // Juste mettre à jour visuellement
+                const isFav = isFavorite(matiere, titre);
+                const btn = card.querySelector('.btn-favorite');
+                btn.textContent = isFav ? '⭐' : '☆';
+                btn.classList.toggle('active', isFav);
+                btn.title = isFav ? 'Retirer des favoris' : 'Ajouter aux favoris';
+                card.classList.toggle('is-favorite', isFav);
+            }
+        });
+
+        // Bouton "Lire" garde le même comportement (déjà géré par le click sur la carte)
+        card.querySelector('.btn-read')?.addEventListener('click', (e) => {
+            e.stopPropagation(); // Éviter double navigation
+            navigateTo('lesson', { selectedMatiere: matiere, selectedLesson: titre });
+        });
+
+        // Bouton "Poser une question" a un comportement différent
+        card.querySelector('.btn-ask')?.addEventListener('click', (e) => {
+            e.stopPropagation(); // Empêcher le click sur la carte
+            navigateTo('chat');
+            setTimeout(() => {
+                const input = document.getElementById('user-input');
+                if (input) {
+                    input.value = `Explique-moi ${titre}`;
+                    input.focus();
+                }
+            }, 100);
+        });
+    });
+}
+
 function createLessonCard(lesson, index) {
     // Nettoyer le résumé des crochets et le tronquer si trop long
     let cleanResume = lesson.resume.replace(/^\[.+?\]\s*/gm, '').replace(/\n\[.+?\]\s*/g, '\n');
@@ -371,8 +546,17 @@ function createLessonCard(lesson, index) {
         cleanResume = cleanResume.substring(0, 150) + '...';
     }
 
+    // Animation delay réduit pour les grandes listes (max 1.5s)
+    const animationDelay = Math.min(index * 30, 1500);
+
+    // Check if lesson is favorite
+    const isFav = isFavorite(lesson.matiere, lesson.titre);
+
     return `
-        <div class="lesson-card" data-titre="${lesson.titre}" style="animation-delay: ${index * 50}ms">
+        <div class="lesson-card ${isFav ? 'is-favorite' : ''}" data-titre="${lesson.titre}" data-matiere="${lesson.matiere}" style="animation-delay: ${animationDelay}ms">
+            <button class="btn-favorite ${isFav ? 'active' : ''}" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">
+                ${isFav ? '⭐' : '☆'}
+            </button>
             <div class="lesson-icon">${getSubjectIcon(lesson.matiere)}</div>
             <div class="lesson-content">
                 <h3 class="lesson-title">${lesson.titre}</h3>
@@ -388,6 +572,45 @@ function createLessonCard(lesson, index) {
             </div>
         </div>
     `;
+}
+
+// ===== VUE FAVORIS =====
+
+function renderFavoritesView(mainContainer) {
+    const favorites = state.favorites;
+
+    if (favorites.length === 0) {
+        mainContainer.innerHTML = `
+            <div class="favorites-empty">
+                <div class="empty-icon">⭐</div>
+                <h2>Aucun favori pour l'instant</h2>
+                <p>Clique sur l'étoile ⭐ d'une leçon pour l'ajouter à tes favoris.</p>
+                <button class="btn-primary" onclick="navigateTo('library', {})">
+                    📚 Explorer la bibliothèque
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    // Sort favorites by date (most recent first)
+    const sortedFavorites = [...favorites].sort((a, b) => b.addedAt - a.addedAt);
+
+    mainContainer.innerHTML = `
+        <div class="library-container">
+            <div class="library-header">
+                <h2>⭐ Mes Favoris</h2>
+                <p>${favorites.length} leçon(s) favorite(s)</p>
+            </div>
+
+            <div class="lessons-grid" id="lessons-grid">
+                ${sortedFavorites.map((lesson, i) => createLessonCard(lesson, i)).join('')}
+            </div>
+        </div>
+    `;
+
+    // Attach click listeners
+    attachLessonCardListeners();
 }
 
 // ===== VUE DÉTAIL LEÇON =====
@@ -747,6 +970,13 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function normalizeString(str) {
+    // Normalise une chaîne pour la recherche : lowercase + suppression accents
+    return str.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
 function formatMatiere(matiere) {
     const names = {
         'mathematiques': 'Mathématiques',
@@ -875,6 +1105,7 @@ function init() {
     console.log('📖 Cahier Numérique SPA - Initializing...');
 
     initTheme();
+    loadFavorites();
     attachGlobalListeners();
     setupThemeToggle();
 
@@ -889,6 +1120,8 @@ function init() {
             selectedMatiere: parts[1],
             selectedLesson: decodeURIComponent(parts[2])
         });
+    } else if (hash === '#favorites') {
+        navigateTo('favorites');
     } else {
         renderView();  // Default: chat view
     }

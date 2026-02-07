@@ -14,9 +14,10 @@
     <div class="paper-bg"></div>
 
     <div class="app-container">
-        <!-- Header -->
-        <header class="cahier-header">
-            <div class="header-inner">
+        <!-- Navigation sticky -->
+        <nav class="main-nav">
+            <div class="nav-inner">
+                <!-- Branding -->
                 <div class="branding">
                     <div class="logo-notebook">
                         <span class="logo-emoji">📖</span>
@@ -27,153 +28,64 @@
                     </div>
                 </div>
 
-                <div class="controls-group">
-                    <div class="select-wrapper">
-                        <label class="select-label">
-                            <span class="label-icon">🎓</span>
-                            <span>Niveau</span>
-                        </label>
-                        <div class="custom-select">
-                            <select id="niveau-select">
-                                <option value="college">Tous niveaux</option>
-                                <option value="6eme">6ème</option>
-                                <option value="5eme">5ème</option>
-                                <option value="4eme">4ème</option>
-                                <option value="3eme">3ème</option>
-                            </select>
-                            <div class="select-arrow">▼</div>
-                        </div>
-                    </div>
-
-                    <div class="select-wrapper">
-                        <label class="select-label">
-                            <span class="label-icon">📚</span>
-                            <span>Matière</span>
-                        </label>
-                        <div class="custom-select">
-                            <select id="matiere-select">
-                                <option value="">Toutes</option>
-                                <option value="mathematiques">📐 Maths</option>
-                                <option value="francais">✍️ Français</option>
-                                <option value="histoire_geo">🗺️ Histoire-Géo</option>
-                                <option value="svt">🔬 SVT</option>
-                                <option value="physique_chimie">⚗️ Physique-Chimie</option>
-                                <option value="technologie">⚙️ Techno</option>
-                                <option value="anglais">🔤 Anglais</option>
-                                <option value="espagnol">🗣️ Espagnol</option>
-                            </select>
-                            <div class="select-arrow">▼</div>
-                        </div>
-                    </div>
+                <!-- Toggle Chat / Bibliothèque / Favoris -->
+                <div class="nav-toggle">
+                    <button class="toggle-btn active" data-view="chat">
+                        💬 Chat
+                    </button>
+                    <button class="toggle-btn" data-view="library">
+                        📚 Bibliothèque
+                    </button>
+                    <button class="toggle-btn" data-view="favorites">
+                        ⭐ Favoris
+                    </button>
                 </div>
-            </div>
-        </header>
 
-        <!-- Chat Container -->
-        <main class="chat-main">
-            <div class="messages-container" id="messages-container">
-                <!-- Welcome Message -->
-                <div class="message-wrapper bot-message welcome-msg">
-                    <div class="message-avatar bot-avatar">
-                        <span>🤖</span>
-                    </div>
-                    <div class="message-bubble paper-bubble">
-                        <div class="message-content">
-                            <h3>Bienvenue dans ton cahier numérique ! 👋</h3>
-                            <p>Je suis là pour t'aider avec tes devoirs de collège. Pose-moi n'importe quelle question sur tes cours !</p>
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="theme-toggle" title="Changer de thème">
+                    <span class="theme-icon">🌙</span>
+                </button>
 
-                            <div class="subjects-grid">
-                                <div class="subject-pill" data-matiere="mathematiques">📐 Maths</div>
-                                <div class="subject-pill" data-matiere="francais">✍️ Français</div>
-                                <div class="subject-pill" data-matiere="histoire_geo">🗺️ Histoire-Géo</div>
-                                <div class="subject-pill" data-matiere="svt">🔬 SVT</div>
-                                <div class="subject-pill" data-matiere="physique_chimie">⚗️ Physique-Chimie</div>
-                                <div class="subject-pill" data-matiere="technologie">⚙️ Techno</div>
-                                <div class="subject-pill" data-matiere="anglais">🔤 Anglais</div>
-                                <div class="subject-pill" data-matiere="espagnol">🗣️ Espagnol</div>
-                            </div>
-
-                            <div class="info-box">
-                                <span class="info-icon">💡</span>
-                                <p><strong>Important :</strong> Je réponds uniquement en me basant sur mes cours de collège. Si je ne trouve pas l'info, je te le dirai honnêtement !</p>
-                            </div>
-
-                            <p class="cta-text">Sélectionne ton niveau et ta matière ci-dessus, puis pose ta question ! 🎯</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Input Area -->
-        <footer class="input-footer">
-            <div class="input-wrapper paper-bubble">
-                <div class="input-indicator" id="input-indicator">
-                    <span class="indicator-dot"></span>
-                    <span id="indicator-text">Prêt à répondre</span>
-                </div>
-                <div class="input-area">
-                    <textarea
-                        id="user-input"
-                        class="message-input"
-                        placeholder="Pose ta question ici... (ex: C'est quoi le théorème de Pythagore ?)"
-                        rows="1"
-                    ></textarea>
-                    <button id="send-button" class="send-btn">
-                        <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                        </svg>
-                        <span class="btn-glow"></span>
+                <!-- Matières (toujours visibles) -->
+                <div class="nav-subjects">
+                    <button class="subject-btn" data-matiere="mathematiques" title="Mathématiques">
+                        📐 Maths
+                    </button>
+                    <button class="subject-btn" data-matiere="francais" title="Français">
+                        ✍️ Français
+                    </button>
+                    <button class="subject-btn" data-matiere="histoire_geo" title="Histoire-Géographie">
+                        🗺️ Histoire-Géo
+                    </button>
+                    <button class="subject-btn" data-matiere="svt" title="SVT">
+                        🔬 SVT
+                    </button>
+                    <button class="subject-btn" data-matiere="physique_chimie" title="Physique-Chimie">
+                        ⚗️ Physique
+                    </button>
+                    <button class="subject-btn" data-matiere="technologie" title="Technologie">
+                        ⚙️ Techno
+                    </button>
+                    <button class="subject-btn" data-matiere="anglais" title="Anglais">
+                        🔤 Anglais
+                    </button>
+                    <button class="subject-btn" data-matiere="espagnol" title="Espagnol">
+                        🗣️ Espagnol
                     </button>
                 </div>
             </div>
+        </nav>
+
+        <!-- Container principal (vues dynamiques) -->
+        <main id="app-main" class="app-main">
+            <!-- Le contenu sera injecté dynamiquement par app.js -->
+        </main>
+
+        <!-- Zone de saisie (uniquement pour vue Chat) -->
+        <footer id="input-footer" class="input-footer">
+            <!-- Sera généré dynamiquement -->
         </footer>
     </div>
-
-    <!-- Templates -->
-    <template id="user-message-template">
-        <div class="message-wrapper user-message">
-            <div class="message-bubble paper-bubble user-bubble">
-                <div class="message-content"></div>
-            </div>
-            <div class="message-avatar user-avatar">
-                <span>✏️</span>
-            </div>
-        </div>
-    </template>
-
-    <template id="bot-message-template">
-        <div class="message-wrapper bot-message">
-            <div class="message-avatar bot-avatar">
-                <span>📚</span>
-            </div>
-            <div class="message-bubble paper-bubble bot-bubble">
-                <div class="message-content"></div>
-                <div class="message-sources"></div>
-            </div>
-        </div>
-    </template>
-
-    <template id="loading-template">
-        <div class="message-wrapper bot-message loading-wrapper">
-            <div class="message-avatar bot-avatar">
-                <span>📚</span>
-            </div>
-            <div class="message-bubble paper-bubble">
-                <div class="loading-skeleton">
-                    <div class="skeleton-line"></div>
-                    <div class="skeleton-line short"></div>
-                    <div class="skeleton-line"></div>
-                </div>
-                <div class="loading-text">
-                    <span class="thinking-dots">
-                        <span>.</span><span>.</span><span>.</span>
-                    </span>
-                    <span>Je cherche dans mes cours</span>
-                </div>
-            </div>
-        </div>
-    </template>
 
     <script src="app.js"></script>
 </body>

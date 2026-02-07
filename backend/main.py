@@ -206,13 +206,13 @@ async def chat_auto(request: ChatRequest):
 
 
 @app.get("/api/lecons/{matiere}")
-async def get_lecons(matiere: str, niveau: Optional[str] = None, limit: int = 100):
+async def get_lecons(matiere: str, niveau: Optional[str] = None, limit: int = 50000):
     """Retourne la liste des leçons disponibles pour une matière.
 
     Args:
         matiere: ID de la matière (mathematiques, francais, etc.).
         niveau: Niveau optionnel pour filtrer (6eme, 5eme, 4eme, 3eme).
-        limit: Nombre maximum de leçons (défaut: 100).
+        limit: Nombre maximum de leçons (défaut: 50000 pour tout récupérer).
 
     Returns:
         Liste de leçons avec titre, resume, url, niveau, nb_chunks.

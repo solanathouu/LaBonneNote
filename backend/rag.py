@@ -199,14 +199,14 @@ class RAGChain:
         self,
         matiere: str,
         niveau: Optional[str] = None,
-        limit: int = 100
+        limit: int = 50000
     ) -> List[Dict[str, any]]:
         """Récupère la liste de toutes les leçons disponibles pour une matière.
 
         Args:
             matiere: Matière à filtrer.
             niveau: Niveau optionnel (6eme, 5eme, 4eme, 3eme).
-            limit: Nombre maximum de leçons à retourner.
+            limit: Nombre maximum de leçons à retourner (défaut: 50000 pour tout récupérer).
 
         Returns:
             Liste de dicts avec titre, url, resume, niveau, nb_chunks.
@@ -232,7 +232,7 @@ class RAGChain:
             collection = self.vector_store._collection
             results = collection.get(
                 where=filters,
-                limit=limit * 10  # On récupère plus car il y a plusieurs chunks par leçon
+                limit=100000  # Récupère beaucoup de chunks (plusieurs par leçon)
             )
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des leçons: {e}")
