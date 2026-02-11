@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from rag import RAGChain
 from detection import auto_detect
 from pdf_service import PDFService
+from quiz_service import QuizService
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -46,15 +47,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialiser la chaîne RAG et le service PDF au démarrage
+# Initialiser la chaîne RAG, le service PDF et le service Quiz au démarrage
 rag_chain: Optional[RAGChain] = None
 pdf_service: Optional[PDFService] = None
+quiz_service: Optional[QuizService] = None
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialise la chaîne RAG et le service PDF au démarrage de l'application."""
-    global rag_chain, pdf_service
+    """Initialise la chaîne RAG, le service PDF et le service Quiz au démarrage de l'application."""
+    global rag_chain, pdf_service, quiz_service
     logger.info("Démarrage de l'application...")
     try:
         rag_chain = RAGChain()
@@ -62,6 +64,9 @@ async def startup_event():
 
         pdf_service = PDFService()
         logger.info("✅ PDF Service initialisé avec succès")
+
+        quiz_service = QuizService(rag_chain)
+        logger.info("✅ Quiz Service initialisé avec succès")
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'initialisation: {e}")
         raise
@@ -87,6 +92,59 @@ class HealthResponse(BaseModel):
     """Réponse du health check."""
     status: str
     message: str
+
+
+class QuizGenerateRequest(BaseModel):
+    """Requête de génération de quiz."""
+    matiere: str = Field(..., description="Matière de la leçon")
+    titre: str = Field(..., description="Titre de la leçon")
+    nb_questions: int = Field(default=5, ge=3, le=10, description="Nombre de questions")
+    niveau: Optional[str] = Field("college", description="Niveau scolaire")
+
+
+class QuizQuestion(BaseModel):
+    """Une question de quiz."""
+    id: int
+    question: str
+    options: list[str]
+    correct_answer: int
+    explanation: str
+
+
+class QuizGenerateResponse(BaseModel):
+    """Réponse de génération de quiz."""
+    quiz_id: str
+    titre: str
+    matiere: str
+    niveau: str
+    nb_questions: int
+    questions: list[QuizQuestion]
+    created_at: str
+
+
+class QuizValidateRequest(BaseModel):
+    """Requête de validation de quiz."""
+    quiz_id: str
+    questions: list[QuizQuestion]
+    answers: list[int] = Field(..., description="Réponses de l'utilisateur (indices)")
+
+
+class QuizResult(BaseModel):
+    """Résultat d'une question."""
+    question_id: int
+    user_answer: int
+    correct_answer: int
+    is_correct: bool
+    explanation: str
+
+
+class QuizValidateResponse(BaseModel):
+    """Réponse de validation."""
+    score: int
+    total: int
+    percentage: float
+    performance_level: str
+    results: list[QuizResult]
 
 
 # Routes API
@@ -405,6 +463,79 @@ async def search_mes_cours(request: ChatRequest):
     except Exception as e:
         logger.error(f"Erreur lors de la recherche: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+# ===== ENDPOINTS QUIZ =====
+
+@app.post("/api/quiz/generate", response_model=QuizGenerateResponse)
+async def generate_quiz(request: QuizGenerateRequest):
+    """Génère un quiz depuis une leçon.
+
+    Args:
+        request: Requête avec matiere, titre, nb_questions, niveau.
+
+    Returns:
+        Quiz complet avec questions générées.
+    """
+    if quiz_service is None:
+        raise HTTPException(status_code=503, detail="Quiz Service non initialisé")
+
+    try:
+        logger.info(f"Génération quiz: {request.matiere} - {request.titre} ({request.nb_questions} questions)")
+
+        quiz = await quiz_service.generate_quiz(
+            matiere=request.matiere,
+            titre=request.titre,
+            nb_questions=request.nb_questions,
+            niveau=request.niveau
+        )
+
+        logger.info(f"✅ Quiz généré avec {quiz['nb_questions']} questions")
+        return quiz
+
+    except ValueError as e:
+        # Erreur métier (leçon non trouvée, pas assez de contenu)
+        logger.warning(f"Erreur validation: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"❌ Erreur génération quiz: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la génération du quiz: {str(e)}"
+        )
+
+
+@app.post("/api/quiz/validate", response_model=QuizValidateResponse)
+async def validate_quiz(request: QuizValidateRequest):
+    """Valide les réponses d'un quiz.
+
+    Args:
+        request: Requête avec quiz_id, questions, answers.
+
+    Returns:
+        Résultats avec score, pourcentage, détails par question.
+    """
+    if quiz_service is None:
+        raise HTTPException(status_code=503, detail="Quiz Service non initialisé")
+
+    try:
+        logger.info(f"Validation quiz: {request.quiz_id}")
+
+        results = quiz_service.validate_answers(
+            quiz_id=request.quiz_id,
+            questions=[q.model_dump() for q in request.questions],
+            answers=request.answers
+        )
+
+        logger.info(f"✅ Quiz validé: {results['score']}/{results['total']} ({results['percentage']:.0f}%)")
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ Erreur validation quiz: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la validation: {str(e)}"
+        )
 
 
 # Servir le frontend (fichiers statiques)

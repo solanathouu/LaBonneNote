@@ -106,3 +106,31 @@ Je peux uniquement t'aider avec les matières suivantes:
 - Technologie
 
 Peux-tu reformuler ta question ou poser une question sur une de ces matières?"""
+
+
+# Prompt de génération de quiz QCM
+QUIZ_GENERATION_PROMPT = """Tu es un professeur expérimenté créant un QCM pour un élève de {niveau}.
+
+CONTEXTE DE LA LEÇON:
+{context}
+
+INSTRUCTIONS:
+1. Crée UNE question à choix multiple basée UNIQUEMENT sur ce contexte
+2. La question doit porter sur un concept clé du texte
+3. Fournis exactement 4 options de réponse (A, B, C, D)
+4. Une seule réponse est correcte
+5. Les 3 distracteurs doivent être plausibles mais clairement incorrects
+6. Adapte la difficulté au niveau {niveau}
+7. Fournis une brève explication (1-2 phrases) de la bonne réponse
+
+IMPORTANT: Réponds UNIQUEMENT avec du JSON valide, aucun texte avant ou après.
+
+FORMAT DE RÉPONSE (JSON strict):
+{{
+    "question": "Votre question ici?",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correct_answer": 0,
+    "explanation": "Explication concise de pourquoi A est correct."
+}}
+
+Le champ correct_answer doit être l'index (0, 1, 2, ou 3) de la bonne réponse dans le tableau options."""
