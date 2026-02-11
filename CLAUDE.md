@@ -26,11 +26,58 @@
 | Backend Quiz Endpoints | ✅ TERMINE - 2 endpoints (/generate, /validate) + 6 modèles Pydantic |
 | Frontend Quiz | ✅ TERMINE - 3 vues (Setup, Active, Results) + navigation + persistance |
 | Frontend Quiz Integration | ✅ TERMINE - Boutons quiz bibliothèque + détail leçon + mascottes contextuelles |
+| Branding LaBonneNote | ✅ TERMINE - Nom, titre, header, welcome message, meta |
+| Recherche par pertinence | ✅ TERMINE - Tri titre d'abord, puis résumé |
+| Déduplication sources | ✅ TERMINE - 1 lien par article dans le chat |
+| Boutons leçons avec labels | ✅ TERMINE - Quiz/Lire/Discuter au lieu d'emojis seuls |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | ✅ Clean - Dernier commit: 4449ce2 (quiz frontend complet) |
+| Git status | ✅ Clean - Dernier commit: cf560cf (LaBonneNote + UX fixes) |
 
-## Last Session Summary (2026-02-11 - Session 11)
+## Last Session Summary (2026-02-11 - Session 12)
+**BRANDING LABONNENOTE + AMÉLIORATIONS UX**
+
+**Part 1 : Labels boutons leçons (15min)** :
+1. ✅ Ajout texte aux boutons d'action des cartes leçons
+   - 📝 → "📝 Quiz"
+   - 📖 → "📖 Lire"
+   - 💬 → "💬 Discuter"
+2. ✅ CSS `.btn-quiz` harmonisé avec `.btn-read` et `.btn-ask` (flex:1, font-weight:600)
+
+**Part 2 : Recherche triée par pertinence (20min)** :
+1. ✅ Système de scoring dans `renderLessonsWithPagination()`
+   - Score 1000 : titre commence par le terme recherché
+   - Score 100 : titre contient le terme
+   - Score 1 : résumé contient le terme
+2. ✅ Tri décroissant par score (plus pertinent en premier)
+
+**Part 3 : Déduplication des sources chat (10min)** :
+1. ✅ `seen_titles = set()` dans `backend/rag.py`
+2. ✅ Skip des chunks dont le titre a déjà été ajouté aux sources
+3. ✅ Résultat : 1 lien par article au lieu de 5x le même
+
+**Part 4 : Branding LaBonneNote (15min)** :
+1. ✅ `<title>` HTML : "LaBonneNote - Assistant Scolaire"
+2. ✅ Header H1 : "LaBonneNote"
+3. ✅ Sous-titre : "Ton assistant scolaire intelligent"
+4. ✅ Welcome message : "Bienvenue sur LaBonneNote !"
+5. ✅ Introduction Marianne : "Je suis Marianne, ton assistante..."
+6. ✅ Console logs, alt images, commentaires JS
+7. ✅ CLAUDE.md titre et objectif
+
+**Fichiers modifiés** :
+- `frontend/index.html` : titre + header + alt
+- `frontend/app.js` : welcome + recherche pertinence + labels boutons + logs
+- `frontend/style.css` : btn-quiz harmonisé
+- `backend/rag.py` : déduplication sources
+- `CLAUDE.md` : branding + session summary
+
+**Commit créé** :
+- `cf560cf` - feat: rename project to LaBonneNote, improve search relevance, deduplicate sources
+
+---
+
+## Previous Session Summary (2026-02-11 - Session 11)
 **SYSTÈME DE QUIZ AUTOMATIQUE - IMPLÉMENTATION COMPLÈTE**
 
 **Part 1 : Backend Quiz Service (4h)** :
