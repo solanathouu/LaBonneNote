@@ -283,11 +283,16 @@ class RAGChain:
         # 2. Generation
         answer = self.generate(question, documents, niveau)
 
-        # 3. Préparer les sources
+        # 3. Préparer les sources (dédupliquées par titre)
+        seen_titles = set()
         sources = []
         for doc in documents:
-            # Déterminer le titre selon la source
             titre = doc.metadata.get("titre", doc.metadata.get("filename", "Sans titre"))
+
+            # Éviter les doublons : un seul lien par article
+            if titre in seen_titles:
+                continue
+            seen_titles.add(titre)
 
             sources.append({
                 "titre": titre,

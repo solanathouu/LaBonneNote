@@ -1,4 +1,4 @@
-// ===== CAHIER NUMÉRIQUE - SPA avec Auto-Détection =====
+// ===== LABONNENOTE - SPA avec Auto-Détection =====
 
 // ===== CONFIGURATION =====
 
@@ -218,8 +218,8 @@ function renderChatView(mainContainer, inputFooter) {
                 </div>
                 <div class="message-bubble paper-bubble">
                     <div class="message-content">
-                        <h3>Bienvenue dans ton cahier numérique ! 👋</h3>
-                        <p>Je suis là pour t'aider avec tes devoirs de collège.</p>
+                        <h3>Bienvenue sur LaBonneNote ! 👋</h3>
+                        <p>Je suis Marianne, ton assistante pour t'aider avec tes devoirs de collège.</p>
                         <p><strong>Nouveau :</strong> Je détecte automatiquement ta matière et ton niveau ! Plus besoin de les sélectionner. 🎯</p>
 
                         <div class="info-box">
@@ -501,15 +501,42 @@ async function renderLibraryView(mainContainer) {
 }
 
 function renderLessonsWithPagination(mainContainer, allLessons) {
-    // Filtrer les leçons si une recherche est active
+    // Filtrer et trier les leçons si une recherche est active
     let filteredLessons = allLessons;
     if (state.searchQuery) {
         const query = normalizeString(state.searchQuery);
-        filteredLessons = allLessons.filter(lesson => {
-            const titre = normalizeString(lesson.titre);
-            const resume = normalizeString(lesson.resume);
-            return titre.includes(query) || resume.includes(query);
-        });
+
+        // Filtrer + calculer score de pertinence
+        const lessonsWithScore = allLessons
+            .map(lesson => {
+                const titre = normalizeString(lesson.titre);
+                const resume = normalizeString(lesson.resume);
+
+                let score = 0;
+
+                // Match dans le titre (priorité haute)
+                if (titre.includes(query)) {
+                    // Si le titre commence par le terme recherché (pertinence maximale)
+                    if (titre.startsWith(query)) {
+                        score += 1000;
+                    }
+                    // Si le titre contient le terme (pertinence haute)
+                    else {
+                        score += 100;
+                    }
+                }
+
+                // Match dans le résumé (pertinence basse)
+                if (resume.includes(query)) {
+                    score += 1;
+                }
+
+                return { lesson, score };
+            })
+            .filter(item => item.score > 0) // Garder seulement les matches
+            .sort((a, b) => b.score - a.score); // Trier par score décroissant
+
+        filteredLessons = lessonsWithScore.map(item => item.lesson);
     }
 
     const lessonsToShow = filteredLessons.slice(0, state.displayedLessonsCount);
@@ -706,9 +733,9 @@ function createLessonCard(lesson, index, animate = false) {
                 </div>
             </div>
             <div class="lesson-actions">
-                <button class="btn-quiz" title="Faire un quiz">📝</button>
-                <button class="btn-read" title="Lire la leçon">📖</button>
-                <button class="btn-ask" title="Poser une question">💬</button>
+                <button class="btn-quiz" title="Faire un quiz">📝 Quiz</button>
+                <button class="btn-read" title="Lire la leçon">📖 Lire</button>
+                <button class="btn-ask" title="Poser une question">💬 Discuter</button>
             </div>
         </div>
     `;
@@ -1883,7 +1910,7 @@ function getPerformanceMessage(percentage) {
 // ===== INITIALIZATION =====
 
 function init() {
-    console.log('📖 Cahier Numérique SPA - Initializing...');
+    console.log('📖 LaBonneNote SPA - Initializing...');
 
     initTheme();
     loadFavorites();
@@ -1918,4 +1945,4 @@ if (document.readyState === 'loading') {
     init();
 }
 
-console.log('📚 Cahier Numérique SPA - Frontend loaded');
+console.log('📚 LaBonneNote SPA - Frontend loaded');

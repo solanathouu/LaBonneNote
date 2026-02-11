@@ -1,7 +1,7 @@
-# Chatbot Assistant Scolaire - College Francais
+# LaBonneNote - Assistant Scolaire College Francais
 
 ## Objectif
-Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires du college francais (6eme-3eme). Le bot refuse de repondre si l'information n'existe pas dans la base de donnees.
+**LaBonneNote** est un chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires du college francais (6eme-3eme). Le bot refuse de repondre si l'information n'existe pas dans la base de donnees.
 
 ## Current Project State
 | Aspect | Status |
