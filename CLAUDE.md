@@ -20,12 +20,57 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 | Frontend Mes Cours | ✅ TERMINE - Upload drag&drop + liste PDFs + suppression + progress bar |
 | Frontend Mode Sombre | ✅ TERMINE - Toggle dark/light avec localStorage |
 | Frontend Animations | ✅ SUPPRIMEES - Toutes animations désactivées (bibliothèque, chat, favoris) |
-| Frontend Mascotte | ✅ TERMINE - Mascotte "Marianne" intégrée (7 variations PNG transparentes) |
+| Frontend Mascotte | ✅ TERMINE - Système complet avec 15/21 images (8 matières + contextes) |
+| Frontend Mascotte par Matière | ✅ TERMINE - Bibliothèque + Détails leçons avec mascottes dynamiques |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | ✅ Clean - Dernier commit: 1788930 (fix taille mascotte) |
+| Git status | ✅ Clean - Dernier commit: de7f560 (mascottes par matière) |
 
-## Last Session Summary (2026-02-11 - Session 9)
+## Last Session Summary (2026-02-11 - Session 10)
+**MASCOTTES DYNAMIQUES PAR MATIÈRE - PHASE 2 COMPLÈTE**
+
+**Part 1 : Système mascotte dynamique (2h)** :
+1. ✅ Fonction `getMascotImage(context, matiere)` créée
+   - Mapping intelligent matière → fichier PNG
+   - 8 variations matières + 5 contextes + accueil + logo
+2. ✅ Messages bot utilisent mascotte selon matière détectée
+3. ✅ Fix débordements d'images avec overflow:hidden + max-width/height
+4. ✅ Commit: `2b94eea` - feat: add dynamic mascot system
+
+**Part 2 : Intégration bibliothèque (2h30)** :
+1. ✅ Page d'accueil Bibliothèque redesignée
+   - Grille de 8 cartes mascottes cliquables (au lieu de texte simple)
+   - Chaque matière a sa Marianne avec bonnet coloré + accessoires
+   - Hover effects avec lévitation + zoom
+2. ✅ Header Bibliothèque avec mascotte
+   - Mascotte 80px à côté du titre quand on navigue dans une matière
+   - Remplace l'emoji par l'illustration complète
+3. ✅ Détail leçon avec mascotte
+   - Mascotte 90px dans le header de leçon
+   - Badge matière ajouté aux métadonnées
+4. ✅ CSS responsive complet
+   - 3 breakpoints (desktop, tablet 768px, mobile 480px)
+   - Tailles adaptatives des mascottes (100→64px)
+   - Dark mode compatible
+5. ✅ Commit: `de7f560` - feat: implement subject-specific mascots throughout library
+
+**Fichiers modifiés** :
+- `frontend/app.js` : +64 lignes (3 nouvelles vues avec mascottes)
+- `frontend/style.css` : +235 lignes (grilles, cartes, layouts responsive)
+
+**Total changements** : +299 lignes, -27 lignes
+
+**Mascottes utilisées** :
+- 8 variations matières : Math.png, francais.png, histoire_geo.png, svt.png, physique_chimie.png, techno.png, anglais.png, espagnol.png
+- 5 contextes : mascot-base, mascot-loading, mascot-thinking, mascot-confused, mascot-reading
+- 2 spéciales : accueil.png (page d'accueil biblio), mascot-logo.png (header)
+- **Total : 15/21 images utilisées**
+
+**Résultat** : Interface immersive avec Marianne qui change selon la matière ! Grille de sélection de matière visuellement riche, cohérence totale bibliothèque/chat/leçons. 🇫🇷✨
+
+---
+
+## Previous Session Summary (2026-02-11 - Session 9)
 **INTÉGRATION MASCOTTE "MARIANNE ÉDUCATIVE"**
 
 **Part 1 : Implémentation plan mascotte (2h)** :
@@ -190,18 +235,11 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 
 ## Next Immediate Action
 
-**L'application est maintenant production-ready avec mascotte intégrée !**
+**L'application est production-ready avec mascottes dynamiques par matière complètement intégrées !**
 
 Pour reprendre le travail, choisir parmi ces options :
 
-**Option 1 - Phase 2 Mascotte (2-4h)** :
-```bash
-# Mascotte dynamique par matière (8 variations déjà disponibles)
-# Modifier frontend/app.js pour utiliser Math.png, francais.png, etc.
-# selon state.selectedMatiere
-```
-
-**Option 2 - Optimisation Images (1h)** :
+**Option 1 - Optimisation Images (1h)** :
 ```bash
 # Réduire taille PNG : 50MB → 3-5MB cible
 python scripts/optimize_mascot_images.py  # À créer
@@ -242,13 +280,13 @@ uvicorn main:app --reload --port 8000
 # Ouvrir dans le navigateur
 # http://localhost:8000
 
-# Tester les nouvelles features :
-# 1. Cliquer sur "📚 Bibliothèque" puis une matière (ex: Histoire-Géo)
-# 2. Utiliser la barre de recherche 🔍 (ex: "révolution")
-# 3. Cliquer sur "Charger 50 leçons de plus" pour pagination
-# 4. Cliquer sur ⭐ pour ajouter aux favoris
-# 5. Cliquer sur "⭐ Favoris" dans la navigation
-# 6. Tester le mode sombre 🌙
+# Tester les nouvelles features mascottes :
+# 1. Cliquer sur "📚 Bibliothèque" → Voir la grille de 8 cartes mascottes
+# 2. Cliquer sur une carte matière → Voir la mascotte dans le header
+# 3. Ouvrir une leçon → Voir la mascotte dans le header de détail
+# 4. Retour au Chat → Poser une question de maths → Voir Math.png dans l'avatar bot
+# 5. Tester le mode sombre 🌙 avec les nouvelles cartes
+# 6. Tester sur mobile (responsive) → Tailles adaptées
 ```
 
 ## Stack technique
