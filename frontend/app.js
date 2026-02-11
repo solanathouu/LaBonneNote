@@ -121,6 +121,9 @@ function renderView() {
         btn.classList.toggle('active', btn.dataset.view === state.view);
     });
 
+    // Update header logo based on selected matiere
+    updateHeaderLogo();
+
     // Render appropriate view
     switch (state.view) {
         case 'chat':
@@ -154,7 +157,7 @@ function renderChatView(mainContainer, inputFooter) {
         messagesDiv.innerHTML = `
             <div class="message-wrapper bot-message welcome-msg">
                 <div class="message-avatar bot-avatar">
-                    <img src="assets/mascot/mascot-base.png"
+                    <img src="${getMascotImage('accueil')}"
                          alt="Marianne"
                          class="mascot-image">
                 </div>
@@ -614,7 +617,7 @@ function renderFavoritesView(mainContainer) {
         mainContainer.innerHTML = `
             <div class="favorites-empty">
                 <div class="empty-state-mascot">
-                    <img src="assets/mascot/mascot-confused.png"
+                    <img src="${getMascotImage('confused')}"
                          alt="Aucun favori">
                 </div>
                 <h2>Aucun favori pour l'instant</h2>
@@ -661,7 +664,7 @@ async function renderMesCoursView(mainContainer) {
             <div class="upload-zone" id="upload-zone">
                 <div class="upload-content">
                     <div class="empty-state-mascot">
-                        <img src="assets/mascot/mascot-reading.png"
+                        <img src="${getMascotImage('reading')}"
                              alt="Importer un PDF">
                     </div>
                     <h3>Glisse un PDF ici</h3>
@@ -994,9 +997,12 @@ function createBotMessage(text, sources = [], detection = null) {
         detectionBadge = `<div class="detection-info">🤖 Détecté : ${niveauText}${separator}${matiereText}</div>`;
     }
 
+    // Utiliser la mascotte de la matière détectée si disponible
+    const mascotImage = getMascotImage('base', detection?.matiere);
+
     wrapper.innerHTML = `
         <div class="message-avatar bot-avatar">
-            <img src="assets/mascot/mascot-base.png"
+            <img src="${mascotImage}"
                  alt="Marianne"
                  class="mascot-image">
         </div>
@@ -1032,7 +1038,7 @@ function createLoadingMessage() {
     wrapper.className = 'message-wrapper bot-message loading-wrapper';
     wrapper.innerHTML = `
         <div class="message-avatar bot-avatar">
-            <img src="assets/mascot/mascot-loading.png"
+            <img src="${getMascotImage('loading')}"
                  alt="Recherche en cours..."
                  class="mascot-image mascot-thinking">
         </div>
@@ -1058,7 +1064,7 @@ function createMatiereChoiceMessage(matieres, question) {
     wrapper.className = 'message-wrapper bot-message';
     wrapper.innerHTML = `
         <div class="message-avatar bot-avatar">
-            <img src="assets/mascot/mascot-thinking.png"
+            <img src="${getMascotImage('thinking')}"
                  alt="Question..."
                  class="mascot-image">
         </div>
@@ -1225,6 +1231,59 @@ function getSubjectIcon(matiere) {
         'espagnol': '🗣️'
     };
     return icons[matiere] || '📖';
+}
+
+function getMascotImage(context = 'base', matiere = null) {
+    // Contextes spéciaux qui ont priorité sur la matière
+    const specialContexts = {
+        'loading': 'mascot-loading.png',
+        'thinking': 'mascot-thinking.png',
+        'confused': 'mascot-confused.png',
+        'reading': 'mascot-reading.png',
+        'celebrating': 'mascot-celebrating.png',
+        'logo': 'mascot-logo.png'
+    };
+
+    // Si contexte spécial, utiliser l'image spéciale
+    if (context !== 'base' && specialContexts[context]) {
+        return `assets/mascot/${specialContexts[context]}`;
+    }
+
+    // Mapping matière → fichier PNG
+    const matiereImages = {
+        'mathematiques': 'Math.png',
+        'francais': 'francais.png',
+        'histoire_geo': 'histoire_geo.png',
+        'svt': 'svt.png',
+        'physique_chimie': 'physique_chimie.png',
+        'technologie': 'techno.png',
+        'anglais': 'anglais.png',
+        'espagnol': 'espagnol.png'
+    };
+
+    // Si matière fournie, utiliser son image
+    if (matiere && matiereImages[matiere]) {
+        return `assets/mascot/${matiereImages[matiere]}`;
+    }
+
+    // Par défaut : accueil.png pour la page d'accueil, ou mascot-base.png
+    return context === 'accueil' ? 'assets/mascot/accueil.png' : 'assets/mascot/mascot-base.png';
+}
+
+function updateHeaderLogo() {
+    // Mettre à jour le logo du header selon la matière sélectionnée
+    const logoImg = document.querySelector('.logo-notebook img');
+    if (!logoImg) return;
+
+    // Si on est dans la bibliothèque ou une leçon avec une matière sélectionnée
+    if (state.selectedMatiere) {
+        logoImg.src = getMascotImage('base', state.selectedMatiere);
+        logoImg.alt = `Marianne - ${formatMatiere(state.selectedMatiere)}`;
+    } else {
+        // Retour au logo par défaut
+        logoImg.src = getMascotImage('logo');
+        logoImg.alt = 'Marianne - Cahier Numérique';
+    }
 }
 
 function autoResizeTextarea() {
