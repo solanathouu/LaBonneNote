@@ -344,13 +344,43 @@ async function handleSendMessage() {
 
 async function renderLibraryView(mainContainer) {
     if (!state.selectedMatiere) {
-        // Show matiere selection screen
+        // Show matiere selection with mascot cards
+        const matieres = [
+            'mathematiques', 'francais', 'histoire_geo', 'svt',
+            'physique_chimie', 'technologie', 'anglais', 'espagnol'
+        ];
         mainContainer.innerHTML = `
             <div class="library-intro">
-                <h2>📚 Bibliothèque de Cours</h2>
-                <p>Sélectionne une matière ci-dessus pour voir toutes les leçons disponibles.</p>
+                <div class="library-intro-header">
+                    <img src="${getMascotImage('accueil')}"
+                         alt="Marianne"
+                         class="library-intro-mascot">
+                    <div>
+                        <h2>Bibliothèque de Cours</h2>
+                        <p>Choisis une matière pour explorer les leçons disponibles</p>
+                    </div>
+                </div>
+                <div class="subject-cards-grid">
+                    ${matieres.map(m => `
+                        <button class="subject-card" data-matiere="${m}">
+                            <img src="${getMascotImage('base', m)}"
+                                 alt="${formatMatiere(m)}"
+                                 class="subject-card-mascot">
+                            <span class="subject-card-name">${formatMatiere(m)}</span>
+                        </button>
+                    `).join('')}
+                </div>
             </div>
         `;
+
+        // Attach click handlers to subject cards
+        mainContainer.querySelectorAll('.subject-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const matiere = card.dataset.matiere;
+                document.body.setAttribute('data-subject', matiere);
+                navigateTo('library', { selectedMatiere: matiere });
+            });
+        });
         return;
     }
 
@@ -373,8 +403,15 @@ async function renderLibraryView(mainContainer) {
             mainContainer.innerHTML = `
                 <div class="library-container">
                     <div class="library-header">
-                        <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
-                        <p>⏳ Chargement des leçons...</p>
+                        <div class="library-header-row">
+                            <img src="${getMascotImage('base', state.selectedMatiere)}"
+                                 alt="${formatMatiere(state.selectedMatiere)}"
+                                 class="library-header-mascot">
+                            <div>
+                                <h2>${formatMatiere(state.selectedMatiere)}</h2>
+                                <p>Chargement des leçons...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -434,8 +471,15 @@ function renderLessonsWithPagination(mainContainer, allLessons) {
     mainContainer.innerHTML = `
         <div class="library-container">
             <div class="library-header">
-                <h2>${getSubjectIcon(state.selectedMatiere)} ${formatMatiere(state.selectedMatiere)}</h2>
-                <p>${allLessons.length} leçons disponibles${state.searchQuery ? ` • ${filteredLessons.length} résultat(s)` : ` • Affichage de ${lessonsToShow.length} leçons`}</p>
+                <div class="library-header-row">
+                    <img src="${getMascotImage('base', state.selectedMatiere)}"
+                         alt="${formatMatiere(state.selectedMatiere)}"
+                         class="library-header-mascot">
+                    <div>
+                        <h2>${formatMatiere(state.selectedMatiere)}</h2>
+                        <p>${allLessons.length} leçons disponibles${state.searchQuery ? ` • ${filteredLessons.length} résultat(s)` : ` • Affichage de ${lessonsToShow.length} leçons`}</p>
+                    </div>
+                </div>
             </div>
 
             <div class="library-search">
@@ -871,11 +915,19 @@ async function renderLessonView(mainContainer) {
                 </div>
 
                 <div class="lesson-header">
-                    <h1>${getSubjectIcon(lesson.matiere)} ${lesson.titre}</h1>
-                    <div class="lesson-meta-large">
-                        <span class="meta-badge">${lesson.niveau}</span>
-                        <span class="meta-badge">${lesson.nb_chunks} sections</span>
-                        <span class="meta-badge">${lesson.source}</span>
+                    <div class="lesson-header-row">
+                        <img src="${getMascotImage('base', lesson.matiere)}"
+                             alt="${formatMatiere(lesson.matiere)}"
+                             class="lesson-header-mascot">
+                        <div>
+                            <h1>${lesson.titre}</h1>
+                            <div class="lesson-meta-large">
+                                <span class="meta-badge">${formatMatiere(lesson.matiere)}</span>
+                                <span class="meta-badge">${lesson.niveau}</span>
+                                <span class="meta-badge">${lesson.nb_chunks} sections</span>
+                                <span class="meta-badge">${lesson.source}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1271,19 +1323,8 @@ function getMascotImage(context = 'base', matiere = null) {
 }
 
 function updateHeaderLogo() {
-    // Mettre à jour le logo du header selon la matière sélectionnée
-    const logoImg = document.querySelector('.logo-notebook img');
-    if (!logoImg) return;
-
-    // Si on est dans la bibliothèque ou une leçon avec une matière sélectionnée
-    if (state.selectedMatiere) {
-        logoImg.src = getMascotImage('base', state.selectedMatiere);
-        logoImg.alt = `Marianne - ${formatMatiere(state.selectedMatiere)}`;
-    } else {
-        // Retour au logo par défaut
-        logoImg.src = getMascotImage('logo');
-        logoImg.alt = 'Marianne - Cahier Numérique';
-    }
+    // Le logo du header reste toujours mascot-logo.png
+    // Les images par matière sont des illustrations complètes, pas adaptées au petit logo
 }
 
 function autoResizeTextarea() {
