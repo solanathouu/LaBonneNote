@@ -154,7 +154,9 @@ function renderChatView(mainContainer, inputFooter) {
         messagesDiv.innerHTML = `
             <div class="message-wrapper bot-message welcome-msg">
                 <div class="message-avatar bot-avatar">
-                    <span>🤖</span>
+                    <img src="assets/mascot/mascot-base.png"
+                         alt="Marianne"
+                         class="mascot-image">
                 </div>
                 <div class="message-bubble paper-bubble">
                     <div class="message-content">
@@ -611,7 +613,10 @@ function renderFavoritesView(mainContainer) {
     if (favorites.length === 0) {
         mainContainer.innerHTML = `
             <div class="favorites-empty">
-                <div class="empty-icon">⭐</div>
+                <div class="empty-state-mascot">
+                    <img src="assets/mascot/mascot-confused.png"
+                         alt="Aucun favori">
+                </div>
                 <h2>Aucun favori pour l'instant</h2>
                 <p>Clique sur l'étoile ⭐ d'une leçon pour l'ajouter à tes favoris.</p>
                 <button class="btn-primary" onclick="navigateTo('library', {})">
@@ -655,7 +660,10 @@ async function renderMesCoursView(mainContainer) {
             <!-- Zone d'upload -->
             <div class="upload-zone" id="upload-zone">
                 <div class="upload-content">
-                    <div class="upload-icon">📤</div>
+                    <div class="empty-state-mascot">
+                        <img src="assets/mascot/mascot-reading.png"
+                             alt="Importer un PDF">
+                    </div>
                     <h3>Glisse un PDF ici</h3>
                     <p>ou clique pour sélectionner un fichier</p>
                     <input type="file" id="file-input" accept=".pdf" style="display: none;">
@@ -988,7 +996,9 @@ function createBotMessage(text, sources = [], detection = null) {
 
     wrapper.innerHTML = `
         <div class="message-avatar bot-avatar">
-            <span>📚</span>
+            <img src="assets/mascot/mascot-base.png"
+                 alt="Marianne"
+                 class="mascot-image">
         </div>
         <div class="message-bubble paper-bubble bot-bubble">
             ${detectionBadge}
@@ -1022,7 +1032,9 @@ function createLoadingMessage() {
     wrapper.className = 'message-wrapper bot-message loading-wrapper';
     wrapper.innerHTML = `
         <div class="message-avatar bot-avatar">
-            <span>📚</span>
+            <img src="assets/mascot/mascot-loading.png"
+                 alt="Recherche en cours..."
+                 class="mascot-image mascot-thinking">
         </div>
         <div class="message-bubble paper-bubble">
             <div class="loading-skeleton">
@@ -1046,7 +1058,9 @@ function createMatiereChoiceMessage(matieres, question) {
     wrapper.className = 'message-wrapper bot-message';
     wrapper.innerHTML = `
         <div class="message-avatar bot-avatar">
-            <span>🤔</span>
+            <img src="assets/mascot/mascot-thinking.png"
+                 alt="Question..."
+                 class="mascot-image">
         </div>
         <div class="message-bubble paper-bubble bot-bubble">
             <div class="message-content">

@@ -359,9 +359,10 @@ body {
     box-shadow: var(--shadow-md);
 }
 
-.logo-emoji {
+/* Replaced by mascot-image */
+/* .logo-emoji {
     font-size: 2rem;
-}
+} */
 
 .brand-title {
     font-family: var(--font-display);
@@ -537,6 +538,68 @@ body {
 .user-avatar {
     background: var(--paper-cream);
     border: 2px solid var(--border-light);
+}
+
+/* ===== MASCOT STYLES ===== */
+.mascot-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+/* Mascot in message avatars */
+.message-avatar .mascot-image {
+    width: 36px;
+    height: 36px;
+}
+
+/* Mascot in logo */
+.logo-notebook .mascot-image {
+    width: 48px;
+    height: 48px;
+}
+
+/* Mascot in empty states */
+.empty-state-mascot {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto var(--space-lg);
+    transition: transform var(--transition-smooth);
+}
+
+.empty-state-mascot:hover {
+    transform: scale(1.05) rotate(2deg);
+}
+
+.empty-state-mascot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+}
+
+/* Loading animation for thinking mascot */
+@keyframes mascotThinking {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.mascot-thinking {
+    animation: mascotThinking 1.5s ease-in-out infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .message-avatar .mascot-image {
+        width: 32px;
+        height: 32px;
+    }
+
+    .empty-state-mascot {
+        width: 100px;
+        height: 100px;
+    }
 }
 
 .message-bubble {
@@ -1033,9 +1096,10 @@ body {
         height: 48px;
     }
 
-    .logo-emoji {
+    /* Replaced by mascot-image */
+    /* .logo-emoji {
         font-size: 1.6rem;
-    }
+    } */
 
     .message-avatar {
         width: 38px;
