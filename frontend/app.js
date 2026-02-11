@@ -24,7 +24,14 @@ const state = {
     // Animation uniquement au chargement initial
     isInitialLibraryLoad: true,
     // Source pour les recherches (vikidia, mes_cours, tous)
-    selectedSource: 'vikidia'
+    selectedSource: 'vikidia',
+    // Quiz
+    currentQuiz: null,           // Quiz actif {quiz_id, questions, ...}
+    quizAnswers: [],             // Réponses utilisateur [0, 2, 1, ...]
+    currentQuestionIndex: 0,     // Index question actuelle (0-based)
+    quizCompleted: false,        // Quiz terminé ou non
+    quizResults: null,           // Résultats après validation
+    quizHistory: []              // Historique des quiz (localStorage)
 };
 
 // ===== FAVORIS =====
@@ -72,6 +79,42 @@ function toggleFavorite(lesson) {
     saveFavorites();
 }
 
+// ===== QUIZ HISTORY =====
+
+function loadQuizHistory() {
+    const saved = localStorage.getItem('quiz_history');
+    if (saved) {
+        try {
+            state.quizHistory = JSON.parse(saved);
+        } catch (e) {
+            state.quizHistory = [];
+        }
+    }
+}
+
+function saveQuizToHistory(quiz, results) {
+    const historyEntry = {
+        quiz_id: quiz.quiz_id,
+        titre: quiz.titre,
+        matiere: quiz.matiere,
+        niveau: quiz.niveau,
+        nb_questions: quiz.nb_questions,
+        score: results.score,
+        percentage: results.percentage,
+        performance_level: results.performance_level,
+        completed_at: Date.now()
+    };
+
+    state.quizHistory.push(historyEntry);
+
+    // Limiter à 50 entrées
+    if (state.quizHistory.length > 50) {
+        state.quizHistory = state.quizHistory.slice(-50);
+    }
+
+    localStorage.setItem('quiz_history', JSON.stringify(state.quizHistory));
+}
+
 // ===== ROUTER SPA =====
 
 /**
@@ -98,6 +141,9 @@ function buildURL(view, params) {
     }
     if (view === 'lesson' && params.selectedMatiere && params.selectedLesson) {
         return `/#lesson/${params.selectedMatiere}/${encodeURIComponent(params.selectedLesson)}`;
+    }
+    if (view === 'quiz-setup' && params.selectedMatiere && params.selectedLesson) {
+        return `/#quiz/${params.selectedMatiere}/${encodeURIComponent(params.selectedLesson)}`;
     }
     return `/#${view}`;
 }
@@ -140,6 +186,15 @@ function renderView() {
             break;
         case 'lesson':
             renderLessonView(mainContainer);
+            break;
+        case 'quiz-setup':
+            renderQuizSetupView(mainContainer);
+            break;
+        case 'quiz-active':
+            renderQuizActiveView(mainContainer);
+            break;
+        case 'quiz-results':
+            renderQuizResultsView(mainContainer);
             break;
     }
 }
@@ -617,6 +672,12 @@ function attachLessonCardListeners() {
                 }
             }, 100);
         });
+
+        // Bouton "Quiz"
+        card.querySelector('.btn-quiz')?.addEventListener('click', (e) => {
+            e.stopPropagation(); // Empêcher le click sur la carte
+            navigateTo('quiz-setup', { selectedMatiere: matiere, selectedLesson: titre });
+        });
     });
 }
 
@@ -645,8 +706,9 @@ function createLessonCard(lesson, index, animate = false) {
                 </div>
             </div>
             <div class="lesson-actions">
-                <button class="btn-read">📖 Lire</button>
-                <button class="btn-ask">💬 Poser une question</button>
+                <button class="btn-quiz" title="Faire un quiz">📝</button>
+                <button class="btn-read" title="Lire la leçon">📖</button>
+                <button class="btn-ask" title="Poser une question">💬</button>
             </div>
         </div>
     `;
@@ -945,6 +1007,9 @@ async function renderLessonView(mainContainer) {
                 </div>
 
                 <div class="lesson-actions-bottom">
+                    <button id="btn-quiz" class="btn-primary" data-matiere="${lesson.matiere}" data-titre="${lesson.titre}">
+                        📝 Faire un quiz sur cette leçon
+                    </button>
                     <button id="btn-ask-about" class="btn-primary">
                         💬 Poser une question sur cette leçon
                     </button>
@@ -979,6 +1044,12 @@ async function renderLessonView(mainContainer) {
                     input.focus();
                 }
             }, 100);
+        });
+
+        document.getElementById('btn-quiz')?.addEventListener('click', (e) => {
+            const matiere = e.target.dataset.matiere;
+            const titre = e.target.dataset.titre;
+            navigateTo('quiz-setup', { selectedMatiere: matiere, selectedLesson: titre });
         });
 
     } catch (error) {
@@ -1421,6 +1492,394 @@ function setupThemeToggle() {
     }
 }
 
+// ===== VUE QUIZ =====
+
+async function renderQuizSetupView(mainContainer) {
+    const { selectedMatiere, selectedLesson } = state;
+
+    if (!selectedMatiere || !selectedLesson) {
+        mainContainer.innerHTML = '<p class="error">❌ Leçon non trouvée</p>';
+        return;
+    }
+
+    const mascotSrc = getMascotImage('base', selectedMatiere);
+    const matieresIcons = {
+        'mathematiques': '📐',
+        'francais': '📝',
+        'histoire_geo': '🗺️',
+        'svt': '🔬',
+        'physique_chimie': '⚗️',
+        'technologie': '⚙️',
+        'anglais': '🇬🇧',
+        'espagnol': '🇪🇸'
+    };
+
+    const formatMatiere = (mat) => {
+        const names = {
+            'mathematiques': 'Mathématiques',
+            'francais': 'Français',
+            'histoire_geo': 'Histoire-Géographie',
+            'svt': 'SVT',
+            'physique_chimie': 'Physique-Chimie',
+            'technologie': 'Technologie',
+            'anglais': 'Anglais',
+            'espagnol': 'Espagnol'
+        };
+        return names[mat] || mat;
+    };
+
+    mainContainer.innerHTML = `
+        <div class="quiz-setup-container">
+            <img src="${mascotSrc}" alt="Mascotte" class="mascot-large">
+
+            <h2>📝 Créer un Quiz</h2>
+            <div class="lesson-badge">${selectedLesson}</div>
+            <div class="matiere-badge" data-matiere="${selectedMatiere}">
+                ${matieresIcons[selectedMatiere] || '📚'} ${formatMatiere(selectedMatiere)}
+            </div>
+
+            <div class="quiz-config">
+                <label for="nb-questions">Nombre de questions :</label>
+                <select id="nb-questions">
+                    <option value="3">3 questions</option>
+                    <option value="5" selected>5 questions</option>
+                    <option value="7">7 questions</option>
+                    <option value="10">10 questions</option>
+                </select>
+            </div>
+
+            <button class="btn-primary" id="start-quiz-btn">
+                🚀 Générer le quiz
+            </button>
+
+            <button class="btn-secondary" id="cancel-quiz-btn">
+                ← Retour
+            </button>
+
+            <div id="loading-message" class="loading-message" style="display: none;">
+                <img src="${getMascotImage('loading')}" class="mascot-small">
+                <p>Génération du quiz en cours...</p>
+                <p class="loading-subtitle">(Cela peut prendre 10-15 secondes)</p>
+            </div>
+        </div>
+    `;
+
+    // Event listeners
+    document.getElementById('start-quiz-btn').addEventListener('click', async () => {
+        const nbQuestions = parseInt(document.getElementById('nb-questions').value);
+        await startQuizGeneration(selectedMatiere, selectedLesson, nbQuestions);
+    });
+
+    document.getElementById('cancel-quiz-btn').addEventListener('click', () => {
+        navigateTo('lesson', { selectedMatiere, selectedLesson });
+    });
+}
+
+async function startQuizGeneration(matiere, titre, nbQuestions) {
+    const loadingMessage = document.getElementById('loading-message');
+    const startBtn = document.getElementById('start-quiz-btn');
+
+    startBtn.disabled = true;
+    loadingMessage.style.display = 'block';
+
+    try {
+        const response = await fetch(`${API_URL}/api/quiz/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                matiere,
+                titre,
+                nb_questions: nbQuestions,
+                niveau: state.detectedNiveau || 'college'
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || `HTTP ${response.status}`);
+        }
+
+        const quiz = await response.json();
+
+        // Initialiser l'état du quiz
+        state.currentQuiz = quiz;
+        state.quizAnswers = Array(quiz.nb_questions).fill(null);
+        state.currentQuestionIndex = 0;
+        state.quizCompleted = false;
+
+        // Naviguer vers le quiz actif
+        navigateTo('quiz-active');
+
+    } catch (error) {
+        console.error('Erreur génération quiz:', error);
+        alert(`❌ Erreur lors de la génération du quiz: ${error.message}`);
+        startBtn.disabled = false;
+        loadingMessage.style.display = 'none';
+    }
+}
+
+function renderQuizActiveView(mainContainer) {
+    if (!state.currentQuiz) {
+        mainContainer.innerHTML = '<p class="error">❌ Aucun quiz actif</p>';
+        return;
+    }
+
+    const quiz = state.currentQuiz;
+    const currentIndex = state.currentQuestionIndex;
+    const question = quiz.questions[currentIndex];
+    const totalQuestions = quiz.nb_questions;
+    const userAnswer = state.quizAnswers[currentIndex];
+
+    const mascotSrc = getMascotImage('thinking', quiz.matiere);
+
+    mainContainer.innerHTML = `
+        <div class="quiz-active-container">
+            <div class="quiz-header">
+                <img src="${mascotSrc}" alt="Mascotte" class="mascot-medium">
+                <h2>Quiz : ${quiz.titre}</h2>
+                <div class="quiz-progress">
+                    Question ${currentIndex + 1} / ${totalQuestions}
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${((currentIndex + 1) / totalQuestions) * 100}%"></div>
+                </div>
+            </div>
+
+            <div class="question-card">
+                <div class="question-number">Question ${currentIndex + 1}</div>
+                <div class="question-text">${question.question}</div>
+
+                <div class="options-grid">
+                    ${question.options.map((option, i) => `
+                        <button
+                            class="option-btn ${userAnswer === i ? 'selected' : ''}"
+                            data-index="${i}"
+                        >
+                            <span class="option-letter">${String.fromCharCode(65 + i)}</span>
+                            <span class="option-text">${option}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="quiz-navigation">
+                <button
+                    class="btn-secondary"
+                    id="prev-btn"
+                    ${currentIndex === 0 ? 'disabled' : ''}
+                >
+                    ← Précédent
+                </button>
+
+                <button
+                    class="btn-secondary"
+                    id="quit-btn"
+                >
+                    ❌ Abandonner
+                </button>
+
+                ${currentIndex < totalQuestions - 1 ? `
+                    <button
+                        class="btn-primary"
+                        id="next-btn"
+                    >
+                        Suivant →
+                    </button>
+                ` : `
+                    <button
+                        class="btn-primary"
+                        id="submit-btn"
+                    >
+                        ✅ Terminer le quiz
+                    </button>
+                `}
+            </div>
+        </div>
+    `;
+
+    // Event listeners pour les options
+    document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
+            state.quizAnswers[currentIndex] = index;
+
+            // Update UI
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            e.currentTarget.classList.add('selected');
+        });
+    });
+
+    // Navigation
+    document.getElementById('prev-btn')?.addEventListener('click', () => {
+        if (currentIndex > 0) {
+            state.currentQuestionIndex--;
+            renderQuizActiveView(mainContainer);
+        }
+    });
+
+    document.getElementById('next-btn')?.addEventListener('click', () => {
+        if (currentIndex < totalQuestions - 1) {
+            state.currentQuestionIndex++;
+            renderQuizActiveView(mainContainer);
+        }
+    });
+
+    document.getElementById('submit-btn')?.addEventListener('click', async () => {
+        // Vérifier que toutes les questions sont répondues
+        const unanswered = state.quizAnswers.filter(a => a === null).length;
+        if (unanswered > 0) {
+            alert(`⚠️ Il reste ${unanswered} question(s) sans réponse !`);
+            return;
+        }
+
+        await submitQuiz(mainContainer);
+    });
+
+    document.getElementById('quit-btn')?.addEventListener('click', () => {
+        if (confirm('Voulez-vous vraiment abandonner le quiz ?')) {
+            navigateTo('lesson', {
+                selectedMatiere: quiz.matiere,
+                selectedLesson: quiz.titre
+            });
+        }
+    });
+}
+
+async function submitQuiz(mainContainer) {
+    const quiz = state.currentQuiz;
+
+    try {
+        const response = await fetch(`${API_URL}/api/quiz/validate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                quiz_id: quiz.quiz_id,
+                questions: quiz.questions,
+                answers: state.quizAnswers
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const results = await response.json();
+        state.quizResults = results;
+        state.quizCompleted = true;
+
+        // Sauvegarder dans l'historique
+        saveQuizToHistory(quiz, results);
+
+        // Naviguer vers les résultats
+        navigateTo('quiz-results');
+
+    } catch (error) {
+        console.error('Erreur validation quiz:', error);
+        alert('❌ Erreur lors de la validation. Réessayez.');
+    }
+}
+
+function renderQuizResultsView(mainContainer) {
+    if (!state.quizResults || !state.currentQuiz) {
+        mainContainer.innerHTML = '<p class="error">❌ Résultats non disponibles</p>';
+        return;
+    }
+
+    const results = state.quizResults;
+    const quiz = state.currentQuiz;
+    const percentage = results.percentage;
+
+    // Choisir mascotte selon performance
+    let mascotContext = 'base';
+    if (percentage >= 80) mascotContext = 'celebrating';
+    else if (percentage < 50) mascotContext = 'confused';
+
+    const mascotSrc = getMascotImage(mascotContext);
+
+    // Message de feedback
+    const feedbackMessage = getPerformanceMessage(percentage);
+
+    mainContainer.innerHTML = `
+        <div class="quiz-results-container">
+            <div class="results-header">
+                <img src="${mascotSrc}" alt="Mascotte" class="mascot-large">
+                <h2>🎯 Résultats du Quiz</h2>
+                <div class="score-display">
+                    <div class="score-big">${results.score} / ${results.total}</div>
+                    <div class="score-percentage">${percentage.toFixed(0)}%</div>
+                    <div class="performance-badge ${results.performance_level.toLowerCase()}">
+                        ${results.performance_level}
+                    </div>
+                </div>
+                <p class="feedback-message">${feedbackMessage}</p>
+            </div>
+
+            <div class="results-review">
+                <h3>📋 Détails des Réponses</h3>
+                ${results.results.map((result, i) => `
+                    <div class="result-card ${result.is_correct ? 'correct' : 'incorrect'}">
+                        <div class="result-header">
+                            <span class="result-icon">${result.is_correct ? '✅' : '❌'}</span>
+                            <span class="result-title">Question ${i + 1}</span>
+                        </div>
+                        <p class="result-question">${quiz.questions[i].question}</p>
+                        <p class="result-answer">
+                            <strong>Ta réponse :</strong>
+                            ${String.fromCharCode(65 + result.user_answer)} - ${quiz.questions[i].options[result.user_answer]}
+                        </p>
+                        ${!result.is_correct ? `
+                            <p class="result-correct-answer">
+                                <strong>Bonne réponse :</strong>
+                                ${String.fromCharCode(65 + result.correct_answer)} - ${quiz.questions[i].options[result.correct_answer]}
+                            </p>
+                        ` : ''}
+                        <p class="result-explanation">
+                            <strong>Explication :</strong> ${result.explanation}
+                        </p>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="results-actions">
+                <button class="btn-primary" id="retry-quiz-btn">
+                    🔄 Refaire le quiz
+                </button>
+                <button class="btn-secondary" id="back-to-lesson-btn">
+                    ← Retour à la leçon
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Event listeners
+    document.getElementById('retry-quiz-btn').addEventListener('click', () => {
+        navigateTo('quiz-setup', {
+            selectedMatiere: quiz.matiere,
+            selectedLesson: quiz.titre
+        });
+    });
+
+    document.getElementById('back-to-lesson-btn').addEventListener('click', () => {
+        navigateTo('lesson', {
+            selectedMatiere: quiz.matiere,
+            selectedLesson: quiz.titre
+        });
+    });
+}
+
+// Helpers
+function getPerformanceMessage(percentage) {
+    if (percentage === 100) {
+        return "🎉 Parfait ! Tu maîtrises parfaitement cette leçon !";
+    } else if (percentage >= 80) {
+        return "👏 Excellent travail ! Continue comme ça !";
+    } else if (percentage >= 60) {
+        return "👍 Bien joué ! Quelques petites erreurs à corriger.";
+    } else if (percentage >= 40) {
+        return "📚 Pas mal, mais il faudrait revoir certains points.";
+    } else {
+        return "💪 N'abandonne pas ! Relis la leçon et réessaie.";
+    }
+}
+
 // ===== INITIALIZATION =====
 
 function init() {
@@ -1428,6 +1887,7 @@ function init() {
 
     initTheme();
     loadFavorites();
+    loadQuizHistory();  // Charger l'historique des quiz
     attachGlobalListeners();
     setupThemeToggle();
 
