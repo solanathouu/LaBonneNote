@@ -9,21 +9,138 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 | Scraper Vikidia | ✅ TERMINE - 8 matieres scrapees (24 321 articles, 43 857 chunks) |
 | Scraper Wikiversite | ❌ ABANDONNE - 0.4% pages exploitables (507 pages testees, 2 lessons) |
 | Scraper Academie en Ligne | ❌ ABANDONNE - URLs obsoletes (8 pages irrelevantes) |
-| ChromaDB ingestion | ✅ TERMINE - 43 870 documents ingeres dans 'cours_college' |
-| Backend FastAPI | ✅ PRODUCTION-READY - RAG + Auto-détection + Bibliothèque (limite 50k leçons) |
-| Backend Auto-Détection | ✅ TERMINE - Détection niveau/matière par mots-clés |
-| Backend Bibliothèque | ✅ TERMINE - 3 endpoints (chat/auto, lecons, detail) |
-| Frontend SPA | ✅ PRODUCTION-READY - 4 vues (Chat, Bibliothèque, Favoris, Détail) |
-| Frontend Chat | ✅ TERMINE - Auto-détection + choix ambiguïté + history persistant |
-| Frontend Bibliothèque | ✅ TERMINE - Pagination (50/fois) + Recherche full-text + Cache intelligent |
-| Frontend Favoris | ✅ TERMINE - Système complet avec localStorage + animations |
-| Frontend Mode Sombre | ✅ TERMINE - Toggle dark/light avec localStorage + auto-detect OS |
-| Frontend Optimisations | ✅ TERMINE - Pagination, animations optimisées, cartes cliquables |
+| ChromaDB ingestion | ✅ TERMINE - 2 collections ('cours_college' + 'mes_cours' pour PDFs) |
+| Backend FastAPI | ✅ PRODUCTION-READY - RAG multi-source + PDF service + 11 endpoints |
+| Backend RAG | ✅ TERMINE - Multi-source (Vikidia/Mes Cours/Les deux) + détection questions générales |
+| Backend PDF Service | ✅ TERMINE - Upload, extraction PyPDFLoader, chunking, ChromaDB |
+| Frontend SPA | ✅ PRODUCTION-READY - 5 vues (Chat, Bibliothèque, Favoris, Mes Cours, Détail) |
+| Frontend Chat | ✅ TERMINE - Sélecteur source + auto-détection + réponses sans sources (salut, merci) |
+| Frontend Bibliothèque | ✅ TERMINE - Pagination + Recherche + Cache + animations désactivées |
+| Frontend Favoris | ✅ TERMINE - Système complet avec localStorage |
+| Frontend Mes Cours | ✅ TERMINE - Upload drag&drop + liste PDFs + suppression + progress bar |
+| Frontend Mode Sombre | ✅ TERMINE - Toggle dark/light avec localStorage |
+| Frontend Animations | ✅ SUPPRIMEES - Toutes animations désactivées (bibliothèque, chat, favoris) |
+| Frontend Mascotte | ✅ TERMINE - Mascotte "Marianne" intégrée (7 variations PNG transparentes) |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | ✅ Clean - Dernier commit: a42a184 (search + pagination + favorites) |
+| Git status | ✅ Clean - Dernier commit: 1788930 (fix taille mascotte) |
 
-## Last Session Summary (2026-02-07 - Session 4)
+## Last Session Summary (2026-02-11 - Session 9)
+**INTÉGRATION MASCOTTE "MARIANNE ÉDUCATIVE"**
+
+**Part 1 : Implémentation plan mascotte (2h)** :
+1. ✅ Création dossier `frontend/assets/mascot/` avec structure
+2. ✅ Ajout 60+ lignes CSS pour styles mascotte + animations
+3. ✅ Modification HTML : logo header (📖 → mascot-logo.png)
+4. ✅ Modification JS : 6 emplacements d'avatars remplacés
+   - Welcome message → mascot-base.png
+   - Bot messages → mascot-base.png
+   - Loading state → mascot-loading.png (avec animation bounce)
+   - Questions ambiguës → mascot-thinking.png
+   - Favoris vide → mascot-confused.png
+   - Upload zone → mascot-reading.png
+5. ✅ Commit: `ffb4aa9` - feat: add Marianne mascot (21 images PNG, ~70MB)
+
+**Part 2 : Suppression arrière-plans (1h)** :
+1. ✅ Script `scripts/remove_bg.py` créé (utilise rembg 2.0.72)
+2. ✅ Traitement 20 images PNG avec transparence alpha
+3. ✅ Réduction taille : 70MB → 50MB (30% gain)
+4. ✅ Backups automatiques dans `backup_with_bg/` (gitignored)
+5. ✅ Commit: `f76a850` - feat: remove background transparency
+
+**Part 3 : Ajustement UX (15min)** :
+1. ✅ Feedback utilisateur : mascotte trop grande en empty states
+2. ✅ Réduction taille : 120px → 80px (desktop), 100px → 70px (mobile)
+3. ✅ Margin ajusté pour meilleur équilibre visuel
+4. ✅ Commit: `1788930` - fix: reduce mascot size
+
+**Fichiers créés** :
+- `frontend/assets/mascot/` (21 PNG + .gitignore)
+- `scripts/remove_bg.py` (63 lignes)
+
+**Fichiers modifiés** :
+- `frontend/index.html` : logo header
+- `frontend/app.js` : 6 emplacements avatars
+- `frontend/style.css` : +65 lignes (styles + animations mascotte)
+
+**Assets** :
+- 7 variations utilisées : base, thinking, loading, celebrating, confused, reading, logo
+- 13 variations matières (bonus Phase 2) : Math, français, histoire, SVT, etc.
+- Format : PNG transparents, 2.1-2.7 MB chacun
+- Total : ~50 MB
+
+**Résultat** : Interface avec identité visuelle française renforcée, mascotte "Marianne" remplace tous les emojis génériques ! 🇫🇷✨
+
+---
+
+## Previous Session Summary (2026-02-07 - Session 8)
+**SYSTÈME COMPLET "MES COURS" + MULTI-SOURCE SEARCH + UX FIXES**
+
+**Part 1 : Fix animations + recherche bibliothèque (1h)** :
+1. ✅ Fix barre de recherche qui perdait le focus à chaque lettre
+2. ✅ Suppression de TOUTES les animations (20+ animations CSS/JS)
+3. ✅ Conservation des transitions hover uniquement
+4. ✅ Commit: `923d310` - fix: remove all animations and fix search bar focus
+
+**Part 2 : Détection questions générales (30min)** :
+1. ✅ Fonction `is_general_question()` dans `backend/rag.py`
+2. ✅ Détection salutations, politesse, questions sur le bot
+3. ✅ Réponses amicales sans sources pour messages généraux
+4. ✅ RAG normal avec sources pour questions thématiques
+
+**Part 3 : Système PDF "Mes Cours" (4h)** :
+
+**Backend** :
+1. ✅ `backend/pdf_service.py` créé (195 lignes) :
+   - Upload et sauvegarde PDFs dans `data/user_pdfs/`
+   - Extraction avec PyPDFLoader de langchain_community
+   - Chunking automatique (RecursiveCharacterTextSplitter)
+   - Ajout à ChromaDB (collection "mes_cours")
+2. ✅ 4 nouveaux endpoints dans `backend/main.py` :
+   - `POST /api/upload-pdf` - Upload et traite un PDF
+   - `GET /api/mes-cours` - Liste des PDFs importés
+   - `DELETE /api/mes-cours/{filename}` - Supprime un PDF
+   - `POST /api/search-mes-cours` - Recherche dans PDFs personnels
+3. ✅ Modification `backend/rag.py` :
+   - 2 collections ChromaDB (Vikidia + Mes Cours)
+   - Paramètre `source` dans retrieve() et run()
+   - Recherche dans "vikidia", "mes_cours", ou "tous"
+   - Fusion et tri des résultats multi-sources
+
+**Frontend** :
+4. ✅ Nouvelle vue "📄 Mes Cours" dans `frontend/app.js` (180 lignes) :
+   - Zone upload drag & drop
+   - Barre de progression
+   - Liste des PDFs avec infos (nom, taille, date)
+   - Bouton supprimer par PDF
+5. ✅ Sélecteur de source dans le chat :
+   - Menu déroulant : "Cours généraux" / "Mes Cours" / "Les deux"
+   - Envoi paramètre `source` à l'API
+   - État persistant dans `state.selectedSource`
+6. ✅ Styles CSS complets (200+ lignes) :
+   - Upload zone avec hover/dragover
+   - Progress bar animée
+   - PDF cards avec hover effects
+   - Source selector styling
+
+**Fichiers créés/modifiés** :
+- CRÉÉ: `backend/pdf_service.py` (195 lignes)
+- MODIFIÉ: `backend/main.py` (+157 lignes, 11 endpoints maintenant)
+- MODIFIÉ: `backend/rag.py` (+119 lignes, multi-source)
+- MODIFIÉ: `frontend/app.js` (+203 lignes, vue Mes Cours + source selector)
+- MODIFIÉ: `frontend/index.html` (+5 lignes, bouton nav)
+- MODIFIÉ: `frontend/style.css` (+207 lignes, styles PDF)
+
+**Commit créé** :
+- `b5fbb9d` - feat: add PDF import system and multi-source search (Mes Cours)
+  - +895 lignes, -34 lignes
+  - 1 nouveau fichier créé
+
+**Résultat** : Système complet permettant d'uploader ses propres PDFs et de les interroger via le chatbot, seuls ou combinés avec Vikidia ! 🚀
+
+---
+
+## Previous Session Summary (2026-02-07 - Session 4)
 **RECHERCHE + PAGINATION + FAVORIS - Bibliothèque complète**
 
 **Phase 1 : Suppression limite backend** :
@@ -73,28 +190,45 @@ Chatbot RAG qui repond **uniquement** a partir de cours et programmes scolaires 
 
 ## Next Immediate Action
 
-**Option 1 : Continuer les améliorations UX**
+**L'application est maintenant production-ready avec mascotte intégrée !**
 
-Prochaines features recommandées (voir `docs/PLAN_AMELIORATIONS.md`) :
-1. 🧪 **Tests automatisés** (14h) - pytest backend + playwright frontend
-2. 🎓 **Classification par niveau** (8h) - Script déjà prêt (`backend/classify_levels.py`)
-3. 📊 **Statistiques utilisateur** (4h) - Tracker recherches, favoris, temps
-4. 🔔 **Notifications** (3h) - Toast messages pour actions (favori ajouté, etc.)
+Pour reprendre le travail, choisir parmi ces options :
 
-**Option 2 : Déploiement**
+**Option 1 - Phase 2 Mascotte (2-4h)** :
+```bash
+# Mascotte dynamique par matière (8 variations déjà disponibles)
+# Modifier frontend/app.js pour utiliser Math.png, francais.png, etc.
+# selon state.selectedMatiere
+```
 
-Déployer sur Render/Railway :
-1. Créer `requirements.txt` complet
-2. Créer `Procfile` pour backend
-3. Configurer variables d'environnement
-4. Setup ChromaDB persistence cloud
+**Option 2 - Optimisation Images (1h)** :
+```bash
+# Réduire taille PNG : 50MB → 3-5MB cible
+python scripts/optimize_mascot_images.py  # À créer
+# Convertir en WebP pour performance web
+```
 
-**Option 3 : Features avancées**
+**Option 3 - Tests Automatisés (8h)** :
+```bash
+# Tests backend pytest
+cd backend && pytest tests/test_rag.py tests/test_pdf_service.py
+```
 
-1. 📝 **Export PDF** - Générer PDF des leçons
-2. 🎤 **Voice input** - Dictée vocale pour questions
-3. 🌐 **i18n** - Support multi-langues
-4. 📱 **PWA** - Application installable
+**Option 4 - Dashboard Stats (4h)** :
+```bash
+# Nouvelle vue avec statistiques d'utilisation
+# - Nombre de PDFs uploadés
+# - Questions posées par matière
+# - Sources les plus consultées
+```
+
+**Option 5 - Déploiement Production (6h)** :
+```bash
+# Containerisation Docker
+# Configuration Nginx reverse proxy
+# SSL/HTTPS avec Let's Encrypt
+# Déploiement sur VPS/Cloud
+```
 
 **Commandes pour lancer l'app** :
 
