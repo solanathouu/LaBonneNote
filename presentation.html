@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaBonneNote - Presentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ===== RESET & BASE ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --font-display: 'Lexend', system-ui, sans-serif;
+            --font-body: 'DM Sans', system-ui, sans-serif;
+            --paper-white: #fefdfb;
+            --paper-cream: #faf9f6;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --text-muted: #95a5a6;
+            --grid-lines: rgba(0, 0, 0, 0.04);
+            --border-light: rgba(0, 0, 0, 0.08);
+            --math-blue: #4a90e2;
+            --french-purple: #9b59b6;
+            --history-orange: #e67e22;
+            --svt-green: #27ae60;
+            --physics-pink: #e74c3c;
+            --tech-indigo: #5f27cd;
+            --english-cyan: #00b894;
+            --spanish-red: #d63031;
+            --accent-color: #4a90e2;
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--paper-cream);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            cursor: default;
+            /* Grid background */
+            background-image:
+                linear-gradient(var(--grid-lines) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-lines) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+
+        h1, h2, h3, h4 { font-family: var(--font-display); }
+
+        /* ===== SLIDE CONTAINER ===== */
+        .presentation {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 80px;
+            opacity: 0;
+            transform: translateX(60px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .slide.exit-left {
+            opacity: 0;
+            transform: translateX(-60px);
+        }
+
+        /* ===== PROGRESS BAR ===== */
+        .progress-bar {
+            position: fixed;
+            bottom: 0; left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--math-blue), var(--french-purple), var(--svt-green));
+            transition: width 0.4s ease;
+            z-index: 100;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* ===== SLIDE COUNTER ===== */
+        .slide-counter {
+            position: fixed;
+            bottom: 16px; right: 24px;
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            z-index: 100;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ===== NAV HINTS ===== */
+        .nav-hints {
+            position: fixed;
+            bottom: 16px; left: 24px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            z-index: 100;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
+        }
+        .nav-hints kbd {
+            background: #eee;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 0.7rem;
+            font-family: monospace;
+        }
+
+        /* ===== MASCOT ===== */
+        .mascot {
+            max-height: 180px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1));
+        }
+        .mascot.small { max-height: 100px; }
+        .mascot.medium { max-height: 140px; }
+        .mascot.large { max-height: 220px; }
+        .mascot.xlarge { max-height: 280px; }
+
+        /* ===== TYPOGRAPHY ===== */
+        .slide-title {
+            font-family: var(--font-display);
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 0.5em;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .slide-subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5em;
+            text-align: center;
+            font-weight: 500;
+        }
+        .slide-text {
+            font-size: 1.15rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            max-width: 800px;
+            text-align: center;
+        }
+
+        /* ===== ACCENT UNDERLINE ===== */
+        .accent-underline {
+            position: relative;
+            display: inline-block;
+        }
+        .accent-underline::after {
+            content: '';
+            position: absolute;
+            bottom: -4px; left: 0;
+            width: 100%; height: 4px;
+            background: var(--accent-color);
+            border-radius: 2px;
+            opacity: 0.6;
+        }
+
+        /* Color accents */
+        .text-blue { color: var(--math-blue); }
+        .text-purple { color: var(--french-purple); }
+        .text-orange { color: var(--history-orange); }
+        .text-green { color: var(--svt-green); }
+        .text-pink { color: var(--physics-pink); }
+        .text-indigo { color: var(--tech-indigo); }
+
+        .bg-blue { background: var(--math-blue); }
+        .bg-purple { background: var(--french-purple); }
+        .bg-orange { background: var(--history-orange); }
+        .bg-green { background: var(--svt-green); }
+        .bg-pink { background: var(--physics-pink); }
+        .bg-indigo { background: var(--tech-indigo); }
+
+        /* ===== CARDS GRID ===== */
+        .cards-grid {
+            display: grid;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+        .cards-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .cards-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .cards-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .card-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+        }
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Left-aligned card variant */
+        .card.left-align {
+            text-align: left;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .card.left-align .card-icon {
+            font-size: 2rem;
+            margin-bottom: 0;
+            flex-shrink: 0;
+        }
+
+        /* Colored top-border card */
+        .card.accent-top { border-top: 4px solid var(--accent-color); }
+        .card.accent-top.blue { border-top-color: var(--math-blue); }
+        .card.accent-top.purple { border-top-color: var(--french-purple); }
+        .card.accent-top.orange { border-top-color: var(--history-orange); }
+        .card.accent-top.green { border-top-color: var(--svt-green); }
+        .card.accent-top.pink { border-top-color: var(--physics-pink); }
+        .card.accent-top.indigo { border-top-color: var(--tech-indigo); }
+
+        /* ===== BIG NUMBER ===== */
+        .big-number {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 3.5rem;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .big-number.huge { font-size: 5rem; }
+
+        /* ===== TAG / BADGE ===== */
+        .tag {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* ===== PIPELINE DIAGRAM ===== */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 950px;
+        }
+        .pipeline-step {
+            background: white;
+            border-radius: 14px;
+            padding: 18px 22px;
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            min-width: 130px;
+            border: 1px solid var(--border-light);
+        }
+        .pipeline-step .step-icon { font-size: 1.8rem; margin-bottom: 6px; }
+        .pipeline-step .step-label {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .pipeline-step .step-detail {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .pipeline-arrow {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        /* ===== MATIERE CARDS (small) ===== */
+        .matiere-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            max-width: 800px;
+            width: 100%;
+        }
+        .matiere-card {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            border-left: 4px solid var(--accent-color);
+            transition: transform 0.3s ease;
+        }
+        .matiere-card:hover { transform: scale(1.03); }
+        .matiere-card .matiere-icon { font-size: 1.6rem; }
+        .matiere-card .matiere-name {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-top: 6px;
+        }
+        .matiere-card .matiere-count {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ===== TECH GRID ===== */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            max-width: 750px;
+            width: 100%;
+        }
+        .tech-item {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: 1px solid var(--border-light);
+        }
+        .tech-item .tech-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+        .tech-item .tech-role {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            display: block;
+        }
+
+        /* ===== FEATURE LIST ===== */
+        .feature-list {
+            list-style: none;
+            text-align: left;
+            max-width: 700px;
+            width: 100%;
+        }
+        .feature-list li {
+            padding: 10px 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-secondary);
+        }
+        .feature-list li .check {
+            color: var(--svt-green);
+            font-weight: 700;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        /* ===== DEMO SLIDE ===== */
+        .demo-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #2d3436 0%, #0f1923 100%);
+            z-index: 0;
+        }
+        .demo-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: white;
+        }
+        .demo-content .slide-title {
+            color: white;
+            font-size: 3.5rem;
+            margin-bottom: 0.3em;
+        }
+        .demo-content .slide-subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 1.4rem;
+        }
+        .demo-pulse {
+            width: 16px; height: 16px;
+            background: #e74c3c;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+            animation: pulse-live 1.5s ease infinite;
+            vertical-align: middle;
+        }
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        /* ===== STAT ROW ===== */
+        .stat-row {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 900px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-item .stat-value {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 3rem;
+            line-height: 1.1;
+        }
+        .stat-item .stat-label {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ===== TIMELINE / ROADMAP ===== */
+        .roadmap {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            max-width: 700px;
+            width: 100%;
+        }
+        .roadmap-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .roadmap-dot {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 3px solid;
+        }
+        .roadmap-dot.done { background: var(--svt-green); border-color: var(--svt-green); }
+        .roadmap-dot.current { background: var(--math-blue); border-color: var(--math-blue); animation: pulse-live 2s ease infinite; }
+        .roadmap-dot.future { background: transparent; border-color: var(--text-muted); }
+        .roadmap-line {
+            width: 2px;
+            height: 18px;
+            background: var(--border-light);
+            margin-left: 6px;
+        }
+        .roadmap-text {
+            font-size: 1.05rem;
+        }
+        .roadmap-text strong {
+            font-family: var(--font-display);
+        }
+        .roadmap-text .roadmap-detail {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* ===== CLOSING / MERCI ===== */
+        .closing-links {
+            display: flex;
+            gap: 24px;
+            margin-top: 24px;
+        }
+        .closing-link {
+            font-size: 1rem;
+            color: var(--math-blue);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 20px;
+            border: 2px solid var(--math-blue);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        .closing-link:hover {
+            background: var(--math-blue);
+            color: white;
+        }
+
+        /* ===== HEADER ROW (mascot + title side by side) ===== */
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            margin-bottom: 24px;
+        }
+
+        /* ===== TWO-COLUMN LAYOUT ===== */
+        .two-cols {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            width: 100%;
+            max-width: 950px;
+        }
+        .two-cols .col { flex: 1; }
+
+        /* ===== ANIMATIONS ===== */
+        .slide.active .anim-fade-up {
+            animation: fadeUp 0.6s ease both;
+        }
+        .slide.active .anim-fade-up:nth-child(2) { animation-delay: 0.1s; }
+        .slide.active .anim-fade-up:nth-child(3) { animation-delay: 0.2s; }
+        .slide.active .anim-fade-up:nth-child(4) { animation-delay: 0.3s; }
+        .slide.active .anim-fade-up:nth-child(5) { animation-delay: 0.4s; }
+        .slide.active .anim-fade-up:nth-child(6) { animation-delay: 0.5s; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide.active .anim-scale {
+            animation: scaleIn 0.5s ease both;
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* ===== MASCOT BOUNCE ===== */
+        .mascot-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .slide { padding: 40px 32px; }
+            .slide-title { font-size: 2rem; }
+            .cards-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+            .matiere-grid { grid-template-columns: repeat(2, 1fr); }
+            .tech-grid { grid-template-columns: 1fr 1fr; }
+            .pipeline { gap: 8px; }
+            .pipeline-step { min-width: 100px; padding: 12px; }
+            .two-cols { flex-direction: column; gap: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="presentation" id="presentation">
+
+    <!-- ==================== SLIDE 1 : TITRE ==================== -->
+    <div class="slide active" data-slide="0">
+        <img src="frontend/assets/mascot/accueil.png" alt="Marianne" class="mascot xlarge mascot-float anim-scale" />
+        <h1 class="slide-title anim-fade-up" style="margin-top: 20px;">
+            <span class="text-blue">La</span><span class="text-purple">Bonne</span><span class="text-green">Note</span>
+        </h1>
+        <p class="slide-subtitle anim-fade-up">Ton assistant scolaire intelligent</p>
+        <p class="slide-text anim-fade-up" style="font-size: 1rem; color: var(--text-muted);">
+            Un chatbot RAG pour les collegiens francais (6eme - 3eme)
+        </p>
+    </div>
+
+    <!-- ==================== SLIDE 2 : LE PROBLEME ==================== -->
+    <div class="slide" data-slide="1">
+        <h2 class="slide-title anim-fade-up">Le <span class="accent-underline text-pink">probleme</span></h2>
+        <p class="slide-subtitle anim-fade-up">Pourquoi les collegiens ont besoin d'aide ?</p>
+        <div class="cards-grid cols-2 anim-fade-up">
+            <div class="card accent-top pink">
+                <span class="card-icon">📚</span>
+                <div class="card-title">Surcharge d'informations</div>
+                <div class="card-desc">Des milliers de cours, manuels et sites web sans guidage personnalise</div>
+            </div>
+            <div class="card accent-top orange">
+                <span class="card-icon">🤖</span>
+                <div class="card-title">ChatGPT invente</div>
+                <div class="card-desc">Les LLM generiques halucinent et donnent des reponses non fiables</div>
+            </div>
+            <div class="card accent-top purple">
+                <span class="card-icon">💰</span>
+                <div class="card-title">Soutien scolaire couteux</div>
+                <div class="card-desc">Les cours particuliers coutent 30-50 euros/h, inaccessibles pour tous</div>
+            </div>
+            <div class="card accent-top blue">
+                <span class="card-icon">📱</span>
+                <div class="card-title">Pas d'outil adapte</div>
+                <div class="card-desc">Aucun assistant dedie au programme du college francais</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 3 : LA SOLUTION ==================== -->
+    <div class="slide" data-slide="2">
+        <div class="header-row">
+            <img src="frontend/assets/mascot/mascot-base.png" alt="Marianne" class="mascot medium anim-scale" />
+            <div>
+                <h2 class="slide-title anim-fade-up" style="text-align:left;">La <span class="accent-underline text-green">solution</span></h2>
+                <p class="slide-subtitle anim-fade-up" style="text-align:left; margin-bottom:0;">Un assistant qui repond <strong>uniquement</strong> depuis des sources verifiees</p>
+            </div>
+        </div>
+        <div class="cards-grid cols-3 anim-fade-up" style="margin-top: 16px;">
+            <div class="card accent-top blue">
+                <span class="card-icon">🔍</span>
+                <div class="card-title">RAG</div>
+                <div class="card-desc">Retrieval-Augmented Generation : chaque reponse est basee sur de vrais cours</div>
+            </div>
+            <div class="card accent-top green">
+                <span class="card-icon">🎯</span>
+                <div class="card-title">Adaptatif</div>
+                <div class="card-desc">Auto-detection du niveau (6e-3e) et de la matiere pour personnaliser</div>
+            </div>
+            <div class="card accent-top purple">
+                <span class="card-icon">📝</span>
+                <div class="card-title">Quiz</div>
+                <div class="card-desc">Generation automatique de QCM pour reviser et s'auto-evaluer</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 4 : ARCHITECTURE RAG ==================== -->
+    <div class="slide" data-slide="3">
+        <h2 class="slide-title anim-fade-up">Architecture <span class="accent-underline text-blue">RAG</span></h2>
+        <p class="slide-subtitle anim-fade-up">Comment fonctionne le pipeline ?</p>
+        <div class="pipeline anim-fade-up">
+            <div class="pipeline-step" style="border-top: 3px solid var(--history-orange);">
+                <div class="step-icon">🌐</div>
+                <div class="step-label">Scraping</div>
+                <div class="step-detail">Vikidia API</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--french-purple);">
+                <div class="step-icon">🧹</div>
+                <div class="step-label">Nettoyage</div>
+                <div class="step-detail">LaTeX, HTML</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--svt-green);">
+                <div class="step-icon">✂️</div>
+                <div class="step-label">Chunking</div>
+                <div class="step-detail">~500 tokens</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--math-blue);">
+                <div class="step-icon">🧮</div>
+                <div class="step-label">Embedding</div>
+                <div class="step-detail">OpenAI</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--tech-indigo);">
+                <div class="step-icon">🗄️</div>
+                <div class="step-label">ChromaDB</div>
+                <div class="step-detail">Vectorielle</div>
+            </div>
+        </div>
+        <div class="pipeline anim-fade-up" style="margin-top: 32px;">
+            <div class="pipeline-step" style="border-top: 3px solid var(--physics-pink);">
+                <div class="step-icon">❓</div>
+                <div class="step-label">Question</div>
+                <div class="step-detail">Utilisateur</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--math-blue);">
+                <div class="step-icon">🔎</div>
+                <div class="step-label">Recherche</div>
+                <div class="step-detail">Similarite</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--svt-green);">
+                <div class="step-icon">📄</div>
+                <div class="step-label">Contexte</div>
+                <div class="step-detail">Top 5 chunks</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--french-purple);">
+                <div class="step-icon">🤖</div>
+                <div class="step-label">GPT-4o-mini</div>
+                <div class="step-detail">Generation</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="border-top: 3px solid var(--svt-green);">
+                <div class="step-icon">✅</div>
+                <div class="step-label">Reponse</div>
+                <div class="step-detail">+ Sources</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 5 : LES DONNEES ==================== -->
+    <div class="slide" data-slide="4">
+        <h2 class="slide-title anim-fade-up">Les <span class="accent-underline text-orange">donnees</span></h2>
+        <p class="slide-subtitle anim-fade-up">Une base de connaissances riche et structuree</p>
+        <div class="stat-row anim-fade-up" style="margin-bottom: 32px;">
+            <div class="stat-item">
+                <div class="big-number text-blue">43 857</div>
+                <div class="stat-label">chunks indexes</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number text-purple">24 321</div>
+                <div class="stat-label">articles scrapes</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number text-green">8</div>
+                <div class="stat-label">matieres</div>
+            </div>
+        </div>
+        <div class="matiere-grid anim-fade-up">
+            <div class="matiere-card" style="border-left-color: var(--history-orange);">
+                <div class="matiere-icon">🗺️</div>
+                <div class="matiere-name">Histoire-Geo</div>
+                <div class="matiere-count">25 474 chunks</div>
+            </div>
+            <div class="matiere-card" style="border-left-color: var(--svt-green);">
+                <div class="matiere-icon">🔬</div>
+                <div class="matiere-name">SVT</div>
+                <div class="matiere-count">8 481 chunks</div>
+            </div>
+            <div class="matiere-card" style="border-left-color: var(--french-purple);">
+                <div class="matiere-icon">📝</div>
+                <div class="matiere-name">Francais</div>
+                <div class="matiere-count">4 835 chunks</div>
+            </div>
+            <div class="matiere-card" style="border-left-color: var(--physics-pink);">
+                <div class="matiere-icon">⚗️</div>
+                <div class="matiere-name">Physique-Chimie</div>
+                <div class="matiere-count">2 751 chunks</div>
+            </div>
+            <div class="matiere-card" style="border-left-color: var(--tech-indigo);">
+                <div class="matiere-icon">⚙️</div>
+                <div class="matiere-name">Technologie</div>
+                <div class="matiere-count">1 349 chunks</div>
+            </div>
+            <div class="matiere-card" style="border-left-color: var(--math-blue);">
+                <div class="matiere-icon">📐</div>
+                <div class="matiere-name">Mathematiques</div>
+                <div class="matiere-count">967 chunks</div>
+            </div>
+            <div class="matiere-card" style="border-left-color: var(--english-cyan);">
+                <div class="matiere-icon">🇬🇧</div>
+                <div class="matiere-name">Anglais</div>
+                <div class="matiere-count">6 articles</div>
+            </div>
+            <div class="matiere-card" style="border-left-color: var(--spanish-red);">
+                <div class="matiere-icon">🇪🇸</div>
+                <div class="matiere-name">Espagnol</div>
+                <div class="matiere-count">3 articles</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 6 : STACK TECHNIQUE ==================== -->
+    <div class="slide" data-slide="5">
+        <h2 class="slide-title anim-fade-up">Stack <span class="accent-underline text-indigo">technique</span></h2>
+        <p class="slide-subtitle anim-fade-up">Technologies choisies pour le projet</p>
+        <div class="tech-grid anim-fade-up">
+            <div class="tech-item">
+                <span class="tech-icon">🐍</span>
+                <div>Python 3.11<span class="tech-role">Backend</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">⚡</span>
+                <div>FastAPI<span class="tech-role">API REST</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🦜</span>
+                <div>LangChain<span class="tech-role">Orchestration RAG</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🗄️</span>
+                <div>ChromaDB<span class="tech-role">Base vectorielle</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🤖</span>
+                <div>GPT-4o-mini<span class="tech-role">LLM Generation</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🔢</span>
+                <div>text-embedding-3<span class="tech-role">Embeddings</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🌐</span>
+                <div>HTML / CSS / JS<span class="tech-role">Frontend SPA</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🕷️</span>
+                <div>BeautifulSoup<span class="tech-role">Scraping</span></div>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">☁️</span>
+                <div>Cloudscraper<span class="tech-role">Bypass Cloudflare</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 7 : FEATURES - CHAT ==================== -->
+    <div class="slide" data-slide="6">
+        <div class="two-cols">
+            <div class="col" style="text-align: center;">
+                <img src="frontend/assets/mascot/mascot-thinking.png" alt="Marianne pense" class="mascot large mascot-float anim-scale" />
+            </div>
+            <div class="col">
+                <h2 class="slide-title anim-fade-up" style="text-align:left; font-size: 2.2rem;">
+                    💬 Chat <span class="accent-underline text-blue">intelligent</span>
+                </h2>
+                <ul class="feature-list anim-fade-up">
+                    <li><span class="check">✓</span> Reponses basees <strong>uniquement</strong> sur les cours</li>
+                    <li><span class="check">✓</span> Auto-detection du niveau et de la matiere</li>
+                    <li><span class="check">✓</span> Sources cliquables sous chaque reponse</li>
+                    <li><span class="check">✓</span> Deduplication des sources (1 lien par article)</li>
+                    <li><span class="check">✓</span> Gestion questions generales (salut, merci)</li>
+                    <li><span class="check">✓</span> Refus si hors-perimetre (pas d'hallucination)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 8 : FEATURES - BIBLIOTHEQUE & QUIZ ==================== -->
+    <div class="slide" data-slide="7">
+        <div class="two-cols">
+            <div class="col">
+                <h2 class="slide-title anim-fade-up" style="text-align:left; font-size: 2.2rem;">
+                    📚 Bibliotheque & 📝 Quiz
+                </h2>
+                <ul class="feature-list anim-fade-up">
+                    <li><span class="check">✓</span> <strong>43 870 lecons</strong> organisees par matiere</li>
+                    <li><span class="check">✓</span> Recherche temps reel (insensible accents)</li>
+                    <li><span class="check">✓</span> Pagination intelligente (50 lecons/page)</li>
+                    <li><span class="check">✓</span> Tri par pertinence (titre > resume)</li>
+                    <li><span class="check">✓</span> <strong>Quiz QCM automatiques</strong> par lecon</li>
+                    <li><span class="check">✓</span> Scoring + feedback detaille par question</li>
+                </ul>
+            </div>
+            <div class="col" style="text-align: center;">
+                <img src="frontend/assets/mascot/mascot-reading.png" alt="Marianne lit" class="mascot large mascot-float anim-scale" />
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 9 : FEATURES - MES COURS & PLUS ==================== -->
+    <div class="slide" data-slide="8">
+        <h2 class="slide-title anim-fade-up">Et <span class="accent-underline text-purple">plus encore</span>...</h2>
+        <div class="cards-grid cols-4 anim-fade-up" style="margin-top: 8px;">
+            <div class="card accent-top blue">
+                <span class="card-icon">📄</span>
+                <div class="card-title">Mes Cours</div>
+                <div class="card-desc">Upload ses propres PDFs et les interroger via le chat</div>
+            </div>
+            <div class="card accent-top orange">
+                <span class="card-icon">⭐</span>
+                <div class="card-title">Favoris</div>
+                <div class="card-desc">Sauvegarder ses lecons preferees (localStorage)</div>
+            </div>
+            <div class="card accent-top indigo">
+                <span class="card-icon">🌙</span>
+                <div class="card-title">Mode sombre</div>
+                <div class="card-desc">Interface jour/nuit avec 30+ variables CSS</div>
+            </div>
+            <div class="card accent-top green">
+                <span class="card-icon">🇫🇷</span>
+                <div class="card-title">Marianne</div>
+                <div class="card-desc">Mascotte dynamique avec 15 variations par contexte</div>
+            </div>
+        </div>
+        <div class="cards-grid cols-3 anim-fade-up" style="margin-top: 20px;">
+            <div class="card accent-top purple">
+                <span class="card-icon">🔍</span>
+                <div class="card-title">Multi-source</div>
+                <div class="card-desc">Rechercher dans Vikidia, Mes Cours, ou les deux</div>
+            </div>
+            <div class="card accent-top pink">
+                <span class="card-icon">📱</span>
+                <div class="card-title">Responsive</div>
+                <div class="card-desc">Interface adaptee mobile, tablette et desktop</div>
+            </div>
+            <div class="card accent-top orange">
+                <span class="card-icon">🎨</span>
+                <div class="card-title">Cahier Numerique</div>
+                <div class="card-desc">Design inspiree du cahier d'ecolier francais</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 10 : DEMO LIVE ==================== -->
+    <div class="slide" data-slide="9">
+        <div class="demo-bg"></div>
+        <div class="demo-content">
+            <img src="frontend/assets/mascot/mascot-celebrating.png" alt="Marianne" class="mascot xlarge mascot-float anim-scale" style="filter: drop-shadow(0 4px 20px rgba(255,255,255,0.2));" />
+            <h2 class="slide-title" style="margin-top: 24px;">
+                <span class="demo-pulse"></span> Demo live
+            </h2>
+            <p class="slide-subtitle">Passons a la demonstration !</p>
+            <p style="color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 16px;">
+                http://localhost:8000
+            </p>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 11 : DEFIS TECHNIQUES ==================== -->
+    <div class="slide" data-slide="10">
+        <h2 class="slide-title anim-fade-up">Defis <span class="accent-underline text-pink">techniques</span></h2>
+        <div class="cards-grid cols-2 anim-fade-up" style="margin-top: 8px;">
+            <div class="card left-align">
+                <span class="card-icon">🛡️</span>
+                <div>
+                    <div class="card-title">Cloudflare anti-bot</div>
+                    <div class="card-desc">Vikidia protege par Cloudflare → utilisation de <strong>cloudscraper</strong> + API MediaWiki pour contourner</div>
+                </div>
+            </div>
+            <div class="card left-align">
+                <span class="card-icon">🧹</span>
+                <div>
+                    <div class="card-title">Donnees bruitees</div>
+                    <div class="card-desc">LaTeX, balises HTML, sections inutiles → pipeline de nettoyage en 5 etapes</div>
+                </div>
+            </div>
+            <div class="card left-align">
+                <span class="card-icon">🎭</span>
+                <div>
+                    <div class="card-title">Anti-hallucination</div>
+                    <div class="card-desc">Le LLM doit refuser de repondre s'il n'a pas de source → <strong>prompt engineering</strong> strict</div>
+                </div>
+            </div>
+            <div class="card left-align">
+                <span class="card-icon">📊</span>
+                <div>
+                    <div class="card-title">Volume de donnees</div>
+                    <div class="card-desc">43 857 chunks a indexer et chercher rapidement → <strong>ChromaDB</strong> avec recherche vectorielle</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 12 : LE MARCHE ==================== -->
+    <div class="slide" data-slide="11">
+        <h2 class="slide-title anim-fade-up">Le <span class="accent-underline text-orange">marche</span></h2>
+        <p class="slide-subtitle anim-fade-up">Un secteur en pleine croissance</p>
+        <div class="stat-row anim-fade-up" style="margin-bottom: 36px;">
+            <div class="stat-item">
+                <div class="big-number huge text-blue">2,5</div>
+                <div class="stat-label">milliards d'euros<br/>EdTech France (2025)</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number huge text-green">3,4M</div>
+                <div class="stat-label">collegiens<br/>en France</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number huge text-purple">72%</div>
+                <div class="stat-label">des eleves utilisent<br/>le numerique pour reviser</div>
+            </div>
+        </div>
+        <p class="slide-text anim-fade-up" style="font-size: 1rem;">
+            Le soutien scolaire en ligne explose. LaBonneNote se positionne comme l'assistant IA <strong>fiable</strong> et <strong>gratuit</strong> dedie au college francais.
+        </p>
+    </div>
+
+    <!-- ==================== SLIDE 13 : VISION FUTURE ==================== -->
+    <div class="slide" data-slide="12">
+        <div class="header-row">
+            <img src="frontend/assets/mascot/mascot-thinking.png" alt="Marianne pense" class="mascot medium anim-scale" />
+            <div>
+                <h2 class="slide-title anim-fade-up" style="text-align:left;">Vision <span class="accent-underline text-green">future</span></h2>
+                <p class="slide-subtitle anim-fade-up" style="text-align:left; margin-bottom:0;">Roadmap d'evolution</p>
+            </div>
+        </div>
+        <div class="roadmap anim-fade-up">
+            <div class="roadmap-item">
+                <div class="roadmap-dot done"></div>
+                <div class="roadmap-text"><strong>MVP</strong> - Chat RAG + Bibliotheque + Quiz <span class="roadmap-detail">✅ Fait</span></div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-dot done"></div>
+                <div class="roadmap-text"><strong>Mes Cours</strong> - Import PDF personnel <span class="roadmap-detail">✅ Fait</span></div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-dot done"></div>
+                <div class="roadmap-text"><strong>UX</strong> - Mascottes, dark mode, favoris <span class="roadmap-detail">✅ Fait</span></div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-dot current"></div>
+                <div class="roadmap-text"><strong>Tests & CI/CD</strong> - Pytest + Playwright + pipeline <span class="roadmap-detail">En cours</span></div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-dot future"></div>
+                <div class="roadmap-text"><strong>Deploiement</strong> - Docker + VPS + HTTPS <span class="roadmap-detail">A venir</span></div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-dot future"></div>
+                <div class="roadmap-text"><strong>Dashboard</strong> - Statistiques + progression eleve <span class="roadmap-detail">A venir</span></div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-dot future"></div>
+                <div class="roadmap-text"><strong>Multi-ecole</strong> - Comptes enseignants + classes <span class="roadmap-detail">A venir</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 14 : CHIFFRES CLES ==================== -->
+    <div class="slide" data-slide="13">
+        <h2 class="slide-title anim-fade-up">Chiffres <span class="accent-underline text-blue">cles</span></h2>
+        <div class="stat-row anim-fade-up" style="margin-top: 24px; gap: 48px;">
+            <div class="stat-item">
+                <div class="big-number huge text-orange">43 857</div>
+                <div class="stat-label">chunks de cours</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number huge text-blue">11</div>
+                <div class="stat-label">endpoints API</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number huge text-green">5</div>
+                <div class="stat-label">vues frontend</div>
+            </div>
+        </div>
+        <div class="stat-row anim-fade-up" style="margin-top: 40px; gap: 48px;">
+            <div class="stat-item">
+                <div class="big-number huge text-purple">8</div>
+                <div class="stat-label">matieres</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number huge text-pink">15</div>
+                <div class="stat-label">mascottes</div>
+            </div>
+            <div class="stat-item">
+                <div class="big-number huge text-indigo">0</div>
+                <div class="stat-label">dependance npm</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SLIDE 15 : MERCI ==================== -->
+    <div class="slide" data-slide="14">
+        <img src="frontend/assets/mascot/mascot-celebrating.png" alt="Marianne celebre" class="mascot xlarge mascot-float anim-scale" />
+        <h2 class="slide-title anim-fade-up" style="margin-top: 20px;">
+            Merci !
+        </h2>
+        <p class="slide-subtitle anim-fade-up">Des questions ?</p>
+        <div style="margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;" class="anim-fade-up">
+            <span class="tag bg-blue">RAG</span>
+            <span class="tag bg-purple">FastAPI</span>
+            <span class="tag bg-green">ChromaDB</span>
+            <span class="tag bg-orange">LangChain</span>
+            <span class="tag bg-pink">GPT-4o-mini</span>
+            <span class="tag bg-indigo">Vanilla JS</span>
+        </div>
+        <p class="slide-text anim-fade-up" style="margin-top: 24px; font-size: 1rem;">
+            <strong><span class="text-blue">La</span><span class="text-purple">Bonne</span><span class="text-green">Note</span></strong> — Ton assistant scolaire intelligent 🇫🇷
+        </p>
+    </div>
+
+</div>
+
+<!-- ===== PROGRESS BAR ===== -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- ===== SLIDE COUNTER ===== -->
+<div class="slide-counter" id="slideCounter">1 / 15</div>
+
+<!-- ===== NAV HINTS ===== -->
+<div class="nav-hints">
+    <kbd>←</kbd> <kbd>→</kbd> ou <kbd>Espace</kbd> pour naviguer &middot; <kbd>Esc</kbd> premier slide
+</div>
+
+<script>
+(function() {
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+
+    const progressBar = document.getElementById('progressBar');
+    const slideCounter = document.getElementById('slideCounter');
+
+    function updateUI() {
+        progressBar.style.width = ((currentSlide + 1) / totalSlides * 100) + '%';
+        slideCounter.textContent = (currentSlide + 1) + ' / ' + totalSlides;
+    }
+
+    function goToSlide(index) {
+        if (index < 0 || index >= totalSlides || index === currentSlide) return;
+
+        const direction = index > currentSlide ? 1 : -1;
+        const currentEl = slides[currentSlide];
+        const nextEl = slides[index];
+
+        // Reset all slides: clear leftover inline styles and classes
+        slides.forEach(function(s) {
+            if (s !== currentEl && s !== nextEl) {
+                s.classList.remove('active', 'exit-left');
+                s.style.transform = '';
+                s.style.opacity = '';
+            }
+        });
+
+        // Exit current
+        currentEl.classList.remove('active');
+        if (direction > 0) currentEl.classList.add('exit-left');
+        currentEl.style.transform = direction > 0 ? 'translateX(-60px)' : 'translateX(60px)';
+        currentEl.style.opacity = '0';
+
+        // Prepare next at its start position
+        nextEl.classList.remove('active', 'exit-left');
+        nextEl.style.transition = 'none';
+        nextEl.style.transform = direction > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+        nextEl.style.opacity = '0';
+
+        // Force reflow so the start position is applied
+        void nextEl.offsetWidth;
+
+        // Animate next into view
+        nextEl.style.transition = '';
+        nextEl.classList.add('active');
+        nextEl.style.transform = '';
+        nextEl.style.opacity = '';
+
+        currentSlide = index;
+        updateUI();
+    }
+
+    function nextSlide() { goToSlide(currentSlide + 1); }
+    function prevSlide() { goToSlide(currentSlide - 1); }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        switch(e.key) {
+            case 'ArrowRight':
+            case ' ':
+            case 'PageDown':
+                e.preventDefault();
+                nextSlide();
+                break;
+            case 'ArrowLeft':
+            case 'PageUp':
+                e.preventDefault();
+                prevSlide();
+                break;
+            case 'Home':
+            case 'Escape':
+                e.preventDefault();
+                goToSlide(0);
+                break;
+            case 'End':
+                e.preventDefault();
+                goToSlide(totalSlides - 1);
+                break;
+        }
+    });
+
+    // Click to advance (right half), go back (left half)
+    document.addEventListener('click', function(e) {
+        // Ignore clicks on links/buttons
+        if (e.target.closest('a, button')) return;
+        const x = e.clientX;
+        if (x > window.innerWidth * 0.3) {
+            nextSlide();
+        } else {
+            prevSlide();
+        }
+    });
+
+    // Touch swipe support
+    let touchStartX = 0;
+    document.addEventListener('touchstart', function(e) {
+        touchStartX = e.touches[0].clientX;
+    });
+    document.addEventListener('touchend', function(e) {
+        const diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) {
+            diff > 0 ? nextSlide() : prevSlide();
+        }
+    });
+
+    // Init
+    updateUI();
+})();
+</script>
+
+</body>
+</html>

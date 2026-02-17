@@ -30,11 +30,42 @@
 | Recherche par pertinence | ✅ TERMINE - Tri titre d'abord, puis résumé |
 | Déduplication sources | ✅ TERMINE - 1 lien par article dans le chat |
 | Boutons leçons avec labels | ✅ TERMINE - Quiz/Lire/Discuter au lieu d'emojis seuls |
+| Presentation HTML | ✅ TERMINE - 15 slides navigables, theme Cahier Numerique, mascottes |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | ✅ Clean - Dernier commit: cf560cf (LaBonneNote + UX fixes) |
+| Git status | ⏳ Uncommitted - presentation.html (nouveau fichier) |
 
-## Last Session Summary (2026-02-11 - Session 12)
+## Last Session Summary (2026-02-17 - Session 13)
+**PRESENTATION HTML POUR ORAL**
+
+**Fichier cree** : `presentation.html` (racine du projet, auto-contenu)
+
+**15 slides** :
+1. Titre LaBonneNote + mascotte accueil
+2. Le probleme - 4 pain points
+3. La solution - 3 piliers (RAG, Adaptatif, Quiz)
+4. Architecture RAG - Pipeline visuel 2 lignes
+5. Les donnees - 43857 chunks, 8 matieres
+6. Stack technique - 9 technos
+7. Features Chat - Liste + mascotte thinking
+8. Features Bibliotheque & Quiz
+9. Features Mes Cours & Plus - 7 cartes
+10. DEMO LIVE - Fond sombre + pulse
+11. Defis techniques - 4 defis
+12. Le marche - Chiffres EdTech
+13. Vision future - Roadmap 7 etapes
+14. Chiffres cles - 6 stats
+15. Merci + Questions
+
+**Navigation** : Fleches clavier + Espace + Click + Swipe tactile + Escape + barre progression
+
+**Bug fix** : `classList.add('')` crashait la navigation arriere (DOMException)
+
+**Design** : Theme Cahier Numerique (fond papier, grille, Lexend + DM Sans, couleurs matieres, mascottes)
+
+---
+
+## Previous Session Summary (2026-02-11 - Session 12)
 **BRANDING LABONNENOTE + AMÉLIORATIONS UX**
 
 **Part 1 : Labels boutons leçons (15min)** :
@@ -385,63 +416,32 @@
 
 ## Next Immediate Action
 
-**L'application est production-ready avec système de quiz automatique complètement intégré !**
+**Presentation prete pour l'oral ! Fichier `presentation.html` non committe.**
 
-Pour reprendre le travail, choisir parmi ces options :
-
-**Option 1 - Tests Quiz (2h)** :
+**Pour presenter** :
 ```bash
-# Tester le système de quiz end-to-end
+# Ouvrir la presentation dans le navigateur
+# Double-clic sur presentation.html ou Ctrl+O dans Chrome
+# Navigation : fleches ← → ou Espace, Escape = retour slide 1
+```
+
+**Pour la demo live (slide 10)** :
+```bash
 cd backend && uvicorn main:app --reload --port 8000
 # Ouvrir http://localhost:8000
-# 1. Générer quiz depuis bibliothèque
-# 2. Tester navigation questions
-# 3. Vérifier scoring et feedback
-# 4. Tester localStorage persistence
-# 5. Tester responsive + dark mode
 ```
 
-**Option 2 - Améliorer Quiz (4h)** :
+**Pour committer la presentation** :
 ```bash
-# Fonctionnalités avancées quiz
-# - Difficulté adaptative selon performance
-# - Question bank (stocker questions réutilisables)
-# - Types variés (Vrai/Faux, texte à trou)
-# - Chronomètre et mode compétition
-# - Statistiques détaillées par matière
+git add presentation.html
+git commit -m "feat: add HTML presentation for oral (15 slides)"
 ```
 
-**Option 3 - Optimisation Images (1h)** :
-```bash
-# Réduire taille PNG : 50MB → 3-5MB cible
-python scripts/optimize_mascot_images.py  # À créer
-# Convertir en WebP pour performance web
-```
-
-**Option 4 - Dashboard Stats (6h)** :
-```bash
-# Nouvelle vue avec statistiques d'utilisation
-# - Nombre de quiz complétés
-# - Performance moyenne par matière
-# - Historique progression
-# - PDFs uploadés + questions posées
-# - Graphiques avec Chart.js
-```
-
-**Option 5 - Tests Automatisés (8h)** :
-```bash
-# Tests backend pytest
-cd backend && pytest tests/test_quiz_service.py tests/test_rag.py
-# Tests frontend Playwright
-```
-
-**Option 6 - Déploiement Production (6h)** :
-```bash
-# Containerisation Docker
-# Configuration Nginx reverse proxy
-# SSL/HTTPS avec Let's Encrypt
-# Déploiement sur VPS/Cloud
-```
+**Apres l'oral, options suivantes** :
+- Tests automatises (pytest + Playwright)
+- Optimisation images mascottes (50MB → 3-5MB)
+- Dashboard statistiques
+- Deploiement Docker
 
 **Commandes pour lancer l'app** :
 
