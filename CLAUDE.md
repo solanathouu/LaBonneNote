@@ -31,11 +31,38 @@
 | Déduplication sources | ✅ TERMINE - 1 lien par article dans le chat |
 | Boutons leçons avec labels | ✅ TERMINE - Quiz/Lire/Discuter au lieu d'emojis seuls |
 | Presentation HTML | ✅ TERMINE - 15 slides navigables, theme Cahier Numerique, mascottes |
+| Guide Technique Oral | ✅ TERMINE - Doc complet pour expliquer chaque fonction Python/LangChain |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | ⏳ Uncommitted - presentation.html (nouveau fichier) |
+| Git status | ✅ A jour |
 
-## Last Session Summary (2026-02-17 - Session 13)
+## Last Session Summary (2026-02-18 - Session 14)
+**GUIDE TECHNIQUE POUR ORAL**
+
+**Fichier cree** : `GUIDE_TECHNIQUE_ORAL.md` (racine du projet)
+
+**Contenu** : Document complet de preparation a la soutenance technique :
+- 11 sections detaillees couvrant chaque fichier Python du projet
+- Explication fonction par fonction avec schemas ASCII du pipeline
+- Glossaire des concepts cles (embedding, RAG, token, temperature, cosine similarity, ChromaDB, LangChain)
+- 13 questions/reponses probables du jury avec arguments
+
+**Sections** :
+1. Vue d'ensemble pipeline RAG (Phase 1 preparation + Phase 2 utilisation)
+2. Scraping Vikidia (API MediaWiki, cloudscraper, recursion categories)
+3. Nettoyage (4 etapes regex : sections, LaTeX, wiki, espaces)
+4. Chunking (500 tokens, overlap 50, decoupe paragraphes/phrases)
+5. Ingestion ChromaDB (embeddings 1536 dim, batch 100)
+6. Chaine RAG - retrieve() + generate() (le coeur du projet)
+7. Prompts (contrainte stricte + adaptation niveau)
+8. Detection automatique (mots-cles matiere, heuristique niveau)
+9. Service PDF (PyPDFLoader, RecursiveCharacterTextSplitter)
+10. Service Quiz (asyncio.gather, generation JSON parallele)
+11. API FastAPI (11 endpoints, Pydantic, CORS)
+
+---
+
+## Previous Session Summary (2026-02-17 - Session 13)
 **PRESENTATION HTML POUR ORAL**
 
 **Fichier cree** : `presentation.html` (racine du projet, auto-contenu)
@@ -416,7 +443,10 @@
 
 ## Next Immediate Action
 
-**Presentation prete pour l'oral ! Fichier `presentation.html` non committe.**
+**Oral pret ! Presentation + Guide technique disponibles.**
+
+**Pour reviser la technique** :
+- Lire `GUIDE_TECHNIQUE_ORAL.md` (13 questions/reponses du jury incluses)
 
 **Pour presenter** :
 ```bash
@@ -429,12 +459,6 @@
 ```bash
 cd backend && uvicorn main:app --reload --port 8000
 # Ouvrir http://localhost:8000
-```
-
-**Pour committer la presentation** :
-```bash
-git add presentation.html
-git commit -m "feat: add HTML presentation for oral (15 slides)"
 ```
 
 **Apres l'oral, options suivantes** :
