@@ -9,8 +9,10 @@ dist/
 build/
 venv/
 .venv/
+.pytest_cache/
 
 # Data (tracked for reproducibility)
+data/user_pdfs/
 
 # ChromaDB
 chromadb/
@@ -19,6 +21,13 @@ chromadb/
 .vscode/
 .idea/
 
+# Claude Code
+.claude/
+
+# Logs
+*.log
+
 # OS
 .DS_Store
 Thumbs.db
+nul
