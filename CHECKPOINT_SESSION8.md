@@ -288,7 +288,7 @@ fetch('/api/chat/auto', {
 ### 1. Vérifier l'environnement
 
 ```bash
-cd C:\Users\skwar\Desktop\RAG
+cd LaBonneNote
 git status  # Doit être clean
 git log --oneline -3  # Voir derniers commits
 ```

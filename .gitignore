@@ -11,7 +11,9 @@ venv/
 .venv/
 .pytest_cache/
 
-# Data (tracked for reproducibility)
+# Data (large JSON files - use scraper to regenerate)
+data/raw/
+data/processed/
 data/user_pdfs/
 
 # ChromaDB
@@ -23,6 +25,11 @@ chromadb/
 
 # Claude Code
 .claude/
+
+# Testing
+htmlcov/
+.coverage
+test_classification_results.json
 
 # Logs
 *.log

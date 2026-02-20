@@ -470,7 +470,7 @@ cd backend && uvicorn main:app --reload --port 8000
 **Commandes pour lancer l'app** :
 
 ```bash
-cd C:\Users\skwar\Desktop\RAG
+cd LaBonneNote
 
 # Lancer le backend (dans un terminal)
 cd backend
