@@ -38,9 +38,26 @@
 | Chemins perso | ✅ TERMINE - Paths Windows remplaces par chemins generiques |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | ✅ A jour - repo public-ready |
+| Git status | ✅ A jour - repo renomme LaBonneNote sur GitHub |
+| GitHub repo | ✅ TERMINE - Renomme RAG → LaBonneNote + description ajoutee |
 
-## Last Session Summary (2026-02-20 - Session 16)
+## Last Session Summary (2026-02-20 - Session 17)
+**RENOMMAGE REPO GITHUB**
+
+**Actions realisees** :
+1. ✅ Installation GitHub CLI (`gh`) - deja installe via winget, trouve dans Program Files
+2. ✅ Authentification verifiee (compte solanathouu, token avec scopes repo+delete_repo)
+3. ✅ Renommage repo via API GitHub : `RAG` → `LaBonneNote`
+4. ✅ Description ajoutee : "Assistant scolaire intelligent pour le college francais (6e-3e) | Chatbot RAG avec 43 000+ lecons, quiz automatiques et bibliotheque interactive"
+5. ✅ Remote local mis a jour : `origin` → `https://github.com/solanathouu/LaBonneNote.git`
+
+**URL** : https://github.com/solanathouu/LaBonneNote (ancienne URL redirige automatiquement)
+
+**Note technique** : `gh` est installe dans `"C:\Program Files\GitHub CLI\gh.exe"` mais pas dans le PATH du shell bash. Utiliser le chemin complet ou ajouter au PATH.
+
+---
+
+## Previous Session Summary (2026-02-20 - Session 16)
 **PREPARATION GITHUB PUBLIC**
 
 **Audit securite** :
@@ -482,7 +499,7 @@
 
 ## Next Immediate Action
 
-**Repo public sur GitHub** : https://github.com/solanathouu/RAG
+**Repo public sur GitHub** : https://github.com/solanathouu/LaBonneNote
 
 **Action prioritaire** : Revoquer et regenerer la cle OpenAI sur https://platform.openai.com/api-keys
 
