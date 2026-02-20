@@ -32,11 +32,50 @@
 | Boutons leçons avec labels | ✅ TERMINE - Quiz/Lire/Discuter au lieu d'emojis seuls |
 | Presentation HTML | ✅ TERMINE - 15 slides navigables, theme Cahier Numerique, mascottes |
 | Guide Technique Oral | ✅ TERMINE - Doc complet pour expliquer chaque fonction Python/LangChain |
+| README GitHub | ✅ TERMINE - README complet (features, architecture, install, API docs) |
+| Securite repo | ✅ TERMINE - Donnees JSON retirees du tracking, doublons mascottes supprimes |
+| .gitignore | ✅ TERMINE - data/raw/, data/processed/, htmlcov/, .coverage exclus |
+| Chemins perso | ✅ TERMINE - Paths Windows remplaces par chemins generiques |
 | Tests | ⏳ Non implementes (backend teste manuellement) |
 | Deployment | ⏳ Local uniquement (port 8000) |
-| Git status | ✅ A jour |
+| Git status | ✅ A jour - repo public-ready |
 
-## Last Session Summary (2026-02-18 - Session 14)
+## Last Session Summary (2026-02-20 - Session 16)
+**PREPARATION GITHUB PUBLIC**
+
+**Audit securite** :
+1. ✅ Verification .env jamais commitee (OK)
+2. ✅ Aucune cle API hardcodee dans le code (OK)
+3. ✅ Identification gros fichiers : 122 MB JSON data + 100 MB images historique
+
+**Nettoyage repo** :
+1. ✅ `git rm --cached` sur 22 fichiers JSON data (data/raw/ + data/processed/)
+2. ✅ Suppression 4 images mascottes dupliquees (Reading.png, Confused.png, Celebrating.png, thinking.png)
+3. ✅ Mise a jour .gitignore : +data/raw/, +data/processed/, +htmlcov/, +.coverage, +test_classification_results.json
+4. ✅ Chemins personnels remplaces dans CLAUDE.md et CHECKPOINT_SESSION8.md
+
+**README.md cree** (racine du projet) :
+- Presentation projet + image mascotte
+- 5 sections features (Chat, Bibliotheque, Quiz, PDF, UX)
+- Tableau stack technique
+- Schema ASCII pipeline RAG (Phase 1 + Phase 2)
+- Guide installation complet (prerequis, venv, scraping, lancement)
+- Arborescence projet
+- Tableau 12 endpoints API
+- Statistiques donnees par matiere
+- Variables d'environnement
+- Contexte + licence
+
+**Fichiers crees** : `README.md`
+**Fichiers modifies** : `.gitignore`, `CLAUDE.md`, `CHECKPOINT_SESSION8.md`
+**Fichiers supprimes du tracking** : 22 JSON (data/) + 4 PNG (mascot/)
+**Commit** : `d7aeb1b` - chore: prepare repo for public GitHub release
+
+**Rappel** : Revoquer cle OpenAI sur https://platform.openai.com/api-keys
+
+---
+
+## Previous Session Summary (2026-02-18 - Session 14)
 **GUIDE TECHNIQUE POUR ORAL**
 
 **Fichier cree** : `GUIDE_TECHNIQUE_ORAL.md` (racine du projet)
@@ -443,29 +482,22 @@
 
 ## Next Immediate Action
 
-**Oral pret ! Presentation + Guide technique disponibles.**
+**Repo public sur GitHub** : https://github.com/solanathouu/RAG
 
-**Pour reviser la technique** :
-- Lire `GUIDE_TECHNIQUE_ORAL.md` (13 questions/reponses du jury incluses)
+**Action prioritaire** : Revoquer et regenerer la cle OpenAI sur https://platform.openai.com/api-keys
 
-**Pour presenter** :
-```bash
-# Ouvrir la presentation dans le navigateur
-# Double-clic sur presentation.html ou Ctrl+O dans Chrome
-# Navigation : fleches ← → ou Espace, Escape = retour slide 1
-```
+**Optionnel - Reduire la taille du repo** :
+- L'historique git contient encore les anciens gros fichiers (~224 MB au clone)
+- Option 1 : `git filter-repo` pour nettoyer l'historique (repo leger)
+- Option 2 : Recreer le repo avec `git init` + commit propre (le plus simple)
+- Option 3 : Laisser tel quel (GitHub tolere jusqu'a 1 GB)
 
-**Pour la demo live (slide 10)** :
-```bash
-cd backend && uvicorn main:app --reload --port 8000
-# Ouvrir http://localhost:8000
-```
-
-**Apres l'oral, options suivantes** :
+**Prochaines evolutions possibles** :
 - Tests automatises (pytest + Playwright)
-- Optimisation images mascottes (50MB → 3-5MB)
+- Optimisation images mascottes (46 MB → 3-5 MB avec compression)
 - Dashboard statistiques
 - Deploiement Docker
+- CI/CD GitHub Actions
 
 **Commandes pour lancer l'app** :
 
